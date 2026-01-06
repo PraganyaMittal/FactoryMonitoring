@@ -1,0 +1,35 @@
+#ifndef LOG_SERVICE_H
+#define LOG_SERVICE_H
+
+/*
+ * LogService.h
+ * Handles log file operations
+ * Single Responsibility: Log management only
+ */
+
+#include "../common/Types.h"
+#include "../../third_party/json/json.hpp"
+
+using json = nlohmann::json;
+
+class HttpClient;
+
+class LogService {
+public:
+    LogService(AgentSettings* settings, HttpClient* client);
+    ~LogService();
+
+    void SyncLogsToServer();
+    static std::string FormatTime(std::filesystem::file_time_type ftime);
+    static nlohmann::json BuildDirectoryTree(const std::filesystem::path& currentPath, const std::filesystem::path& rootPath);
+
+private:
+    AgentSettings* settings_;
+    HttpClient* httpClient_;
+    std::string lastSyncedStructure_;
+
+    LogService(const LogService&);
+    LogService& operator=(const LogService&);
+};
+
+#endif
