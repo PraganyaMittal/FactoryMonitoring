@@ -1,4 +1,4 @@
-﻿import { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Download, BarChart3 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import type { LogFileContent } from '../../types/logTypes';
@@ -34,6 +34,20 @@ export default function LogFileViewerModal({
         return () => window.removeEventListener('keydown', handleKeyDown);
     }, [onClose]);
 
+    // --- PARSING LOGIC (Same as Selector) ---
+    // Extracts "16:00.log" from "2025010116_GeneralLog.log"
+    const displayName = useMemo(() => {
+        const fileName = fileContent.fileName;
+        // Regex: 8 digits (Date) + 2 digits (Hour) + _ + anything + .log
+        const match = fileName.match(/^\d{8}(\d{2})_.*\.log$/i);
+
+        if (match) {
+            // match[1] is the hour (e.g. "16")
+            return `${match[1]}:00.log`;
+        }
+        return fileName; // Fallback to original if pattern doesn't match
+    }, [fileContent.fileName]);
+
     return (
         <motion.div
             initial={{ opacity: 0 }}
@@ -68,12 +82,14 @@ export default function LogFileViewerModal({
                             background: 'linear-gradient(135deg, #60a5fa, #4ade80)',
                             WebkitBackgroundClip: 'text',
                             WebkitTextFillColor: 'transparent',
-                            backgroundClip: 'text'
+                            backgroundClip: 'text',
+                            margin: 0
                         }}>
-                            {fileContent.fileName}
+                            {displayName} {/* Showing Formatted Name */}
                         </h2>
+                        {/* Showing Original Filename for reference */}
                         <div className="text-mono" style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '0.25rem' }}>
-                            {fileContent.filePath}
+                            {fileContent.fileName}
                         </div>
                     </div>
 
