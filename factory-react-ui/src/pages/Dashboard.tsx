@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from 'react'
+import { useEffect, useState, useRef, useCallback } from 'react'
 import { useParams, useSearchParams } from 'react-router-dom'
 import { LayoutGrid, List, Activity, ChevronRight, Zap, FileCode, AlertCircle, X } from 'lucide-react'
 import { factoryApi } from '../services/api'
@@ -29,39 +29,7 @@ export default function Dashboard() {
     const [showComplianceModal, setShowComplianceModal] = useState<{ lineNumber: number, nonCompliantPCs: FactoryPC[] } | null>(null)
     const mounted = useRef(true)
 
-    useEffect(() => {
-        mounted.current = true
-        loadData(true)
-
-        // Standard 5-second polling
-        const interval = setInterval(() => loadData(false), 5000)
-        return () => { mounted.current = false; clearInterval(interval) }
-    }, [version, lineParam])
-
-    // Listen for Model Library deployment completions
-    useEffect(() => {
-        const handleRefresh = () => loadData(false)
-        eventBus.on(EVENTS.REFRESH_DASHBOARD, handleRefresh)
-        return () => eventBus.off(EVENTS.REFRESH_DASHBOARD, handleRefresh)
-    }, [])
-
-    useEffect(() => {
-        if (data && data.lines.length > 0) {
-            const initialExpanded: Record<number, boolean> = {}
-            let hasNew = false
-            data.lines.forEach(line => {
-                if (!(line.lineNumber in expandedLines)) {
-                    initialExpanded[line.lineNumber] = true
-                    hasNew = true
-                }
-            })
-            if (hasNew) {
-                setExpandedLines(prev => ({ ...prev, ...initialExpanded }))
-            }
-        }
-    }, [data])
-
-    const loadData = async (isInitial: boolean) => {
+    const loadData = useCallback(async (isInitial: boolean) => {
         if (isInitial) setLoading(true)
         try {
             const targetLine = lineParam ? parseInt(lineParam) : undefined
@@ -84,7 +52,41 @@ export default function Dashboard() {
         } finally {
             if (isInitial && mounted.current) setLoading(false)
         }
-    }
+    }, [lineParam, version])
+
+    useEffect(() => {
+        mounted.current = true
+        loadData(true)
+
+        // Standard 5-second polling
+        const interval = setInterval(() => loadData(false), 5000)
+        return () => { mounted.current = false; clearInterval(interval) }
+    }, [version, lineParam])
+
+    // Listen for Model Library deployment completions
+    useEffect(() => {
+        const handleRefresh = () => loadData(false)
+        eventBus.on(EVENTS.REFRESH_DASHBOARD, handleRefresh)
+        return () => eventBus.off(EVENTS.REFRESH_DASHBOARD, handleRefresh)
+    }, [loadData])
+
+    useEffect(() => {
+        if (data && data.lines.length > 0) {
+            const initialExpanded: Record<number, boolean> = {}
+            let hasNew = false
+            data.lines.forEach(line => {
+                if (!(line.lineNumber in expandedLines)) {
+                    initialExpanded[line.lineNumber] = true
+                    hasNew = true
+                }
+            })
+            if (hasNew) {
+                setExpandedLines(prev => ({ ...prev, ...initialExpanded }))
+            }
+        }
+    }, [data])
+
+
 
     const toggleLine = (lineNumber: number) => {
         setExpandedLines(prev => ({ ...prev, [lineNumber]: !prev[lineNumber] }))
