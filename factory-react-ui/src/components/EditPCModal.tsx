@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react'
 import { X, Save, AlertCircle, ChevronDown, Lock, Server, FolderTree, Info } from 'lucide-react'
 import { factoryApi } from '../services/api'
-import type { FactoryPC, PCUpdateRequest } from '../types'
+import type { PCDetails, PCUpdateRequest } from '../types'
 
 interface Props {
-    pc: FactoryPC
+    pc: PCDetails
     onClose: () => void
     onSuccess: () => void
 }
@@ -16,7 +16,7 @@ export default function EditPCModal({ pc, onClose, onSuccess }: Props) {
         pcNumber: pc.pcNumber,
         ipAddress: pc.ipAddress,
         configFilePath: pc.configFilePath,
-        logFolderPath: pc.logFolderPath,
+        logFolderPath: pc.logFilePath,
         modelFolderPath: pc.modelFolderPath,
         modelVersion: pc.modelVersion
     })
@@ -109,7 +109,7 @@ export default function EditPCModal({ pc, onClose, onSuccess }: Props) {
                             gap: '0.6rem',
                             fontSize: '0.85rem'
                         }}>
-                            <AlertCircle size={16} flexShrink={0} />
+                            <AlertCircle size={16} style={{ flexShrink: 0 }} />
                             <span>{error}</span>
                         </div>
                     )}

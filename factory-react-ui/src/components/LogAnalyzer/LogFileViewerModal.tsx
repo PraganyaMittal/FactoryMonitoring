@@ -1,5 +1,5 @@
 ﻿import { useEffect, useState } from 'react';
-import { X, Download, BarChart3 } from 'lucide-react';
+import { Download, BarChart3 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import type { LogFileContent } from '../../types/logTypes';
 

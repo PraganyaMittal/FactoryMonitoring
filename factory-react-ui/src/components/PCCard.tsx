@@ -1,4 +1,4 @@
-﻿import { Cpu, Circle, Zap } from 'lucide-react'
+﻿import { Circle } from 'lucide-react'
 import type { FactoryPC } from '../types'
 
 interface Props {
