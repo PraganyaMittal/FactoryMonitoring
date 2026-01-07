@@ -11,10 +11,8 @@ export default function LongGanttChart({ barrels, onReady }: Props) {
     const chartRef = useRef<HTMLDivElement>(null);
     const observerRef = useRef<ResizeObserver | null>(null);
     const resizeInProgress = useRef(false);
-    // Added to prevent resize bounce on initial mount
     const isFirstRender = useRef(true);
 
-    // REFS to save user's zoom/pan state across re-renders
     const savedXRange = useRef<[number, number] | null>(null);
     const savedYRange = useRef<[number, number] | null>(null);
 
@@ -28,7 +26,7 @@ export default function LongGanttChart({ barrels, onReady }: Props) {
             .catch(() => { resizeInProgress.current = false; });
     }, []);
 
-    const BARREL_COLORS = ['#3b82f6', '#10b981', '#8b5cf6']; // Blue, Green, Purple
+    const BARREL_COLORS = ['#3b82f6', '#10b981', '#8b5cf6'];
 
     const chartData = useMemo(() => {
         const allOps = barrels.flatMap(b => b.operations);
@@ -55,6 +53,8 @@ export default function LongGanttChart({ barrels, onReady }: Props) {
             base: allOps.map(op => op.globalStartTime),
             orientation: 'h',
             visible: 'legendonly',
+            // FIX: Set explicit width to keep bars thin
+            width: 0.4,
             marker: {
                 color: '#fbbf24',
                 line: { width: 0 },
@@ -79,10 +79,11 @@ export default function LongGanttChart({ barrels, onReady }: Props) {
             x: allOps.map(op => op.actualDuration),
             base: allOps.map(op => op.globalStartTime),
             orientation: 'h',
+            // FIX: Set explicit width to keep bars thin
+            width: 0.4,
             marker: {
                 color: allOps.map(op => BARREL_COLORS[parseInt(op.barrelId) % 3]),
                 line: { width: 0 },
-                // Highlight Logic
                 opacity: allOps.map(op => {
                     if (selectedBarrelId === null) return 1;
                     return op.barrelId === selectedBarrelId ? 1 : 0.1;
@@ -168,7 +169,7 @@ export default function LongGanttChart({ barrels, onReady }: Props) {
                 range: savedYRange.current || undefined
             },
             barmode: 'group',
-            bargap: 0.02,
+            bargap: 0.2, // Reset to standard gap, since width is controlled explicitly
             bargroupgap: 0,
             plot_bgcolor: '#0b1121',
             paper_bgcolor: '#0b1121',
@@ -264,7 +265,6 @@ export default function LongGanttChart({ barrels, onReady }: Props) {
         observerRef.current = new ResizeObserver((entries) => {
             for (const entry of entries) {
                 if (entry.target === chartRef.current) {
-                    // FIX: Prevent double-render bounce on initial mount
                     if (isFirstRender.current) {
                         isFirstRender.current = false;
                         return;

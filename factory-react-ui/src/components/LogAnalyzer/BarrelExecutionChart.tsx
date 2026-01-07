@@ -32,7 +32,15 @@ export default function BarrelExecutionChart({ barrels, selectedBarrel, onBarrel
         if (!chartRef.current || barrels.length === 0) return;
 
         const barrelCount = barrels.length;
-        // ... (Logic for tick calculation remains same)
+        const xData = barrels.map(b => b.barrelId);
+        const yData = barrels.map(b => b.totalExecutionTime);
+
+        // REMOVED: Fixed yRange calculation
+        // const maxTime = Math.max(...yData, 0);
+        // const yRange = [0, maxTime * 1.15]; 
+
+        const colors = barrels.map(b => b.barrelId === selectedBarrel ? '#38bdf8' : '#475569');
+
         const calculateTickGap = (visibleStart: number, visibleEnd: number) => {
             const visibleBarrels = visibleEnd - visibleStart;
             const chartWidth = chartRef.current?.clientWidth || 1000;
@@ -40,10 +48,6 @@ export default function BarrelExecutionChart({ barrels, selectedBarrel, onBarrel
             const targetTickCount = Math.floor(chartWidth / pixelsPerTick);
             return Math.max(1, Math.ceil(visibleBarrels / targetTickCount));
         };
-
-        const xData = barrels.map(b => b.barrelId);
-        const yData = barrels.map(b => b.totalExecutionTime);
-        const colors = barrels.map(b => b.barrelId === selectedBarrel ? '#38bdf8' : '#475569');
 
         const trace = {
             x: xData,
@@ -58,9 +62,10 @@ export default function BarrelExecutionChart({ barrels, selectedBarrel, onBarrel
             },
             text: yData.map(y => `${y.toFixed(0)}ms`),
             textposition: 'outside' as const,
-            textfont: { size: 11, color: '#f8fafc', family: 'JetBrains Mono, monospace', weight: 600 },
+            textfont: { size: 10, color: '#f8fafc', family: 'JetBrains Mono, monospace', weight: 600 },
             hovertemplate: '<b>Barrel %{x}</b><br>Time: <b>%{y:.0f}ms</b><extra></extra>',
-            hoverlabel: { bgcolor: '#1e293b', bordercolor: '#38bdf8', font: { color: '#f8fafc', size: 13 } }
+            hoverlabel: { bgcolor: '#1e293b', bordercolor: '#38bdf8', font: { color: '#f8fafc', size: 13 } },
+            cliponaxis: false
         };
 
         const initialTickGap = calculateTickGap(0, barrelCount);
@@ -68,24 +73,26 @@ export default function BarrelExecutionChart({ barrels, selectedBarrel, onBarrel
 
         const layout: Partial<Plotly.Layout> = {
             xaxis: {
-                title: { text: 'Barrel ID', font: { color: '#f8fafc', size: 13, family: 'Inter, sans-serif' }, standoff: 15 },
-                tickfont: { color: '#94a3b8', size: 11, family: 'JetBrains Mono, monospace' },
+                title: { text: 'Barrel ID', font: { color: '#f8fafc', size: 12, family: 'Inter, sans-serif' }, standoff: 10 },
+                tickfont: { color: '#94a3b8', size: 10, family: 'JetBrains Mono, monospace' },
                 dtick: initialTickGap,
-                rangeslider: showRangeSlider ? { visible: true, bgcolor: '#1e293b' } : { visible: false },
+                rangeslider: showRangeSlider ? { visible: true, bgcolor: '#1e293b', thickness: 0.1 } : { visible: false },
                 automargin: true,
                 gridcolor: '#334155',
                 zeroline: false
             },
             yaxis: {
-                title: { text: 'Execution Time (ms)', font: { color: '#f8fafc', size: 13, family: 'Inter, sans-serif' }, standoff: 15 },
-                tickfont: { color: '#94a3b8', size: 11, family: 'JetBrains Mono, monospace' },
+                title: { text: 'Time (ms)', font: { color: '#f8fafc', size: 12, family: 'Inter, sans-serif' }, standoff: 10 },
+                tickfont: { color: '#94a3b8', size: 10, family: 'JetBrains Mono, monospace' },
                 gridcolor: '#334155',
                 automargin: true,
-                zeroline: false
+                zeroline: false,
+                autorange: true // ENABLED: Auto-scale
+                // REMOVED: range: yRange
             },
             plot_bgcolor: '#0b1121',
             paper_bgcolor: '#0b1121',
-            margin: { l: 60, r: 20, t: 20, b: showRangeSlider ? 100 : 50 },
+            margin: { l: 50, r: 20, t: 20, b: showRangeSlider ? 60 : 40 },
             autosize: true,
             showlegend: false,
             hovermode: 'closest' as const
@@ -98,13 +105,10 @@ export default function BarrelExecutionChart({ barrels, selectedBarrel, onBarrel
             modeBarButtonsToRemove: ['toImage', 'sendDataToCloud', 'lasso2d', 'select2d']
         };
 
-        // WRAPPER: Delay newPlot slightly to ensure container ref has dimensions
         requestAnimationFrame(() => {
             if (!chartRef.current) return;
 
             Plotly.newPlot(chartRef.current, [trace], layout, config).then(() => {
-                // FIX: Force one resize calculation immediately after plot 
-                // to fix the "stuck at small size" bug.
                 Plotly.Plots.resize(chartRef.current!).then(() => {
                     if (onReady) onReady();
                 });
@@ -178,5 +182,5 @@ export default function BarrelExecutionChart({ barrels, selectedBarrel, onBarrel
         };
     }, [updateChart, safeResize]);
 
-    return <div ref={chartRef} style={{ width: '100%', height: '100%', minHeight: '300px' }} />;
+    return <div ref={chartRef} style={{ width: '100%', height: '100%' }} />;
 }
