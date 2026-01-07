@@ -51,14 +51,6 @@ namespace FactoryMonitoringWeb.Models.DTOs
         public string ConfigContent { get; set; } = string.Empty;
     }
 
-    // Log Update Request
-    public class LogUpdateRequest
-    {
-        public int PCId { get; set; }
-        public string LogContent { get; set; } = string.Empty;
-        public string LogFileName { get; set; } = string.Empty;
-    }
-
     // Model Sync Request
     public class ModelSyncRequest
     {

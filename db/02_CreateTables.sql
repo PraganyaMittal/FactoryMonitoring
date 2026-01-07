@@ -43,20 +43,6 @@ CREATE TABLE ConfigFiles (
 GO
 
 -- ============================================
--- TABLE: LogFiles
--- ============================================
-CREATE TABLE LogFiles (
-    LogId INT PRIMARY KEY IDENTITY(1,1),
-    PCId INT NOT NULL,
-    LogContent NVARCHAR(MAX) NOT NULL,
-    LogFileName NVARCHAR(255) NOT NULL,
-    LastModified DATETIME DEFAULT GETDATE(),
-    CONSTRAINT FK_LogFiles_FactoryPCs FOREIGN KEY (PCId) 
-        REFERENCES FactoryPCs(PCId) ON DELETE CASCADE
-);
-GO
-
--- ============================================
 -- TABLE: Models
 -- ============================================
 CREATE TABLE Models (
