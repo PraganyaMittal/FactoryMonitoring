@@ -1,5 +1,5 @@
 ﻿import { useState, useEffect } from 'react';
-import { X, BarChart3, Minimize2, Maximize2, Minimize, Activity, FileText, LayoutList } from 'lucide-react';
+import { X, BarChart3, Minimize2, Activity, FileText, LayoutList, RectangleVertical, ArrowUpFromLine, ArrowDownFromLine } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import BarrelExecutionChart from './BarrelExecutionChart';
 import OperationGanttChart from './OperationGanttChart';
@@ -27,6 +27,21 @@ const btnStyle = {
     transition: 'all 0.2s'
 };
 
+const viewBtnStyle = (isActive: boolean) => ({
+    padding: '0.25rem 0.6rem',
+    display: 'flex',
+    alignItems: 'center',
+    gap: '0.3rem',
+    border: isActive ? '1px solid #3b82f6' : '1px solid #334155',
+    borderRadius: '6px',
+    background: isActive ? 'rgba(59, 130, 246, 0.15)' : 'transparent',
+    color: isActive ? '#60a5fa' : '#94a3b8',
+    cursor: 'pointer',
+    fontSize: '0.7rem',
+    fontWeight: 600,
+    transition: 'all 0.2s'
+});
+
 const tabBtnStyle = (isActive: boolean) => ({
     padding: '0.35rem 0.75rem',
     borderRadius: '6px',
@@ -50,6 +65,7 @@ export default function AnalysisResultsModal({
 }: Props) {
     const [isMinimized, setIsMinimized] = useState(false);
     const [activeTab, setActiveTab] = useState<'timeline' | 'analysis' | 'logs'>('timeline');
+    // expandedView state: 'none' (70/30 split), 'barrel' (maximized bottom), 'gantt' (maximized top)
     const [expandedView, setExpandedView] = useState<'none' | 'barrel' | 'gantt'>('none');
 
     useEffect(() => {
@@ -79,7 +95,6 @@ export default function AnalysisResultsModal({
                     <div className="card" style={{
                         height: '100%',
                         padding: '0.5rem',
-                        // REMOVED border: 'none' and background: 'transparent' to match Logs tab style
                         display: 'flex',
                         flexDirection: 'column'
                     }}>
@@ -91,60 +106,66 @@ export default function AnalysisResultsModal({
 
             case 'analysis':
                 return (
-                    <div style={{ display: 'flex', gap: '0.5rem', height: '100%' }}>
+                    <div style={{
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: '4px',
+                        height: '100%',
+                        overflow: 'hidden'
+                    }}>
+
+                        {/* --- TOP: SEQUENCE GANTT CHART (70%) --- */}
                         <motion.div
+                            // REMOVED: layout prop to stop bounce
                             style={{
-                                width: expandedView === 'gantt' ? '0%' : expandedView === 'barrel' ? '100%' : '40%',
-                                display: expandedView === 'gantt' ? 'none' : 'flex',
-                                flexDirection: 'column'
+                                height: expandedView === 'barrel' ? '0%' : expandedView === 'gantt' ? '100%' : '70%',
+                                width: '100%',
+                                display: expandedView === 'barrel' ? 'none' : 'flex',
+                                flexDirection: 'column',
+                                minHeight: 0,
+                                overflow: 'hidden'
                             }}
-                            layout
                         >
                             <div className="card" style={{ height: '100%', padding: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
-                                <div style={{ padding: '0.5rem 1rem', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                    <h3 style={{ fontSize: '0.85rem', fontWeight: 600, color: '#60a5fa', margin: 0 }}>Barrel Comparison</h3>
-                                    <button style={btnStyle} onClick={() => setExpandedView(prev => prev === 'barrel' ? 'none' : 'barrel')}>
-                                        {expandedView === 'barrel' ? <Minimize size={14} /> : <Maximize2 size={14} />}
-                                    </button>
-                                </div>
-                                <div style={{ flex: 1, padding: '0.5rem', minHeight: 0 }}>
-                                    <BarrelExecutionChart
-                                        barrels={result.barrels}
-                                        selectedBarrel={selectedBarrel}
-                                        onBarrelClick={onBarrelClick}
-                                    />
+                                <div style={{ flex: 1, width: '100%', minHeight: 0, position: 'relative' }}>
+                                    <div style={{ position: 'absolute', inset: 0 }}>
+                                        {selectedBarrelData ? (
+                                            <OperationGanttChart operations={selectedBarrelData.operations} barrelId={selectedBarrel || ''} />
+                                        ) : (
+                                            <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-dim)' }}>
+                                                Select a barrel from the chart below
+                                            </div>
+                                        )}
+                                    </div>
                                 </div>
                             </div>
                         </motion.div>
 
+                        {/* --- BOTTOM: BARREL COMPARISON (30%) --- */}
                         <motion.div
+                            // REMOVED: layout prop to stop bounce
                             style={{
-                                width: expandedView === 'barrel' ? '0%' : expandedView === 'gantt' ? '100%' : '60%',
-                                display: expandedView === 'barrel' ? 'none' : 'flex',
-                                flexDirection: 'column'
+                                height: expandedView === 'gantt' ? '0%' : expandedView === 'barrel' ? '100%' : '30%',
+                                width: '100%',
+                                display: expandedView === 'gantt' ? 'none' : 'flex',
+                                flexDirection: 'column',
+                                minHeight: 0,
+                                overflow: 'hidden'
                             }}
-                            layout
                         >
                             <div className="card" style={{ height: '100%', padding: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
-                                <div style={{ padding: '0.5rem 1rem', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                    <h3 style={{ fontSize: '0.85rem', fontWeight: 600, color: '#60a5fa', margin: 0 }}>
-                                        {selectedBarrel ? `Sequence: Barrel ${selectedBarrel}` : 'Select a Barrel'}
-                                    </h3>
-                                    <button style={btnStyle} onClick={() => setExpandedView(prev => prev === 'gantt' ? 'none' : 'gantt')}>
-                                        {expandedView === 'gantt' ? <Minimize size={14} /> : <Maximize2 size={14} />}
-                                    </button>
-                                </div>
-                                <div style={{ flex: 1, padding: '0.5rem', minHeight: 0 }}>
-                                    {selectedBarrelData ? (
-                                        <OperationGanttChart operations={selectedBarrelData.operations} barrelId={selectedBarrel || ''} />
-                                    ) : (
-                                        <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-dim)' }}>
-                                            Select a barrel from the left chart
-                                        </div>
-                                    )}
+                                <div style={{ flex: 1, width: '100%', minHeight: 0, position: 'relative' }}>
+                                    <div style={{ position: 'absolute', inset: 0 }}>
+                                        <BarrelExecutionChart
+                                            barrels={result.barrels}
+                                            selectedBarrel={selectedBarrel}
+                                            onBarrelClick={onBarrelClick}
+                                        />
+                                    </div>
                                 </div>
                             </div>
                         </motion.div>
+
                     </div>
                 );
 
@@ -205,7 +226,9 @@ export default function AnalysisResultsModal({
                                 <div style={{ width: 28, height: 28, borderRadius: 6, background: 'rgba(59, 130, 246, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                                     <Activity size={16} color="#3b82f6" />
                                 </div>
-                                <h2 style={{ fontSize: '1rem', fontWeight: 700, margin: 0 }}>{result.fileName || 'Log Analysis'}</h2>
+                                <h2 style={{ fontSize: '1rem', fontWeight: 700, margin: 0 }}>
+                                    {result.fileName || 'Log Analysis'}
+                                </h2>
                             </div>
 
                             {/* TABS */}
@@ -222,14 +245,55 @@ export default function AnalysisResultsModal({
                             </div>
                         </div>
 
-                        {/* Controls */}
-                        <div style={{ display: 'flex', gap: '0.5rem' }}>
-                            <button className="btn btn-secondary btn-icon" onClick={() => setIsMinimized(true)} style={btnStyle}>
-                                <Minimize2 size={16} />
-                            </button>
-                            <button className="btn btn-secondary btn-icon" onClick={onClose} style={btnStyle}>
-                                <X size={16} />
-                            </button>
+                        {/* Right Controls */}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+
+                            {/* Barrel Info & View Controls */}
+                            {activeTab === 'analysis' && (
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', paddingRight: '1rem', borderRight: '1px solid #334155' }}>
+                                    {/* Barrel Text moved here */}
+                                    {selectedBarrel && (
+                                        <span style={{ fontSize: '0.85rem', color: '#60a5fa', fontWeight: 600, whiteSpace: 'nowrap' }}>
+                                            Sequence: Barrel {selectedBarrel}
+                                        </span>
+                                    )}
+
+                                    {/* Buttons */}
+                                    <div style={{ display: 'flex', gap: '0.25rem' }}>
+                                        <button
+                                            style={viewBtnStyle(expandedView === 'gantt')}
+                                            onClick={() => setExpandedView(expandedView === 'gantt' ? 'none' : 'gantt')}
+                                            title="Maximize Sequence"
+                                        >
+                                            <ArrowUpFromLine size={14} /> Max Seq
+                                        </button>
+                                        <button
+                                            style={viewBtnStyle(expandedView === 'none')}
+                                            onClick={() => setExpandedView('none')}
+                                            title="Split View"
+                                        >
+                                            <RectangleVertical size={14} /> Split
+                                        </button>
+                                        <button
+                                            style={viewBtnStyle(expandedView === 'barrel')}
+                                            onClick={() => setExpandedView(expandedView === 'barrel' ? 'none' : 'barrel')}
+                                            title="Maximize Bar Chart"
+                                        >
+                                            <ArrowDownFromLine size={14} /> Max Bar
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Window Controls */}
+                            <div style={{ display: 'flex', gap: '0.5rem' }}>
+                                <button className="btn btn-secondary btn-icon" onClick={() => setIsMinimized(true)} style={btnStyle}>
+                                    <Minimize2 size={16} />
+                                </button>
+                                <button className="btn btn-secondary btn-icon" onClick={onClose} style={btnStyle}>
+                                    <X size={16} />
+                                </button>
+                            </div>
                         </div>
                     </div>
 
