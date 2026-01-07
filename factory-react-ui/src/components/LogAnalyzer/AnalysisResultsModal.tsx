@@ -79,12 +79,10 @@ export default function AnalysisResultsModal({
                     <div className="card" style={{
                         height: '100%',
                         padding: '0.5rem',
-                        border: 'none',
-                        background: 'transparent',
+                        // REMOVED border: 'none' and background: 'transparent' to match Logs tab style
                         display: 'flex',
                         flexDirection: 'column'
                     }}>
-                        {/* Legend removed to increase graph area */}
                         <div style={{ flex: 1, minHeight: 0 }}>
                             <LongGanttChart barrels={result.barrels} />
                         </div>
@@ -197,7 +195,7 @@ export default function AnalysisResultsModal({
                 >
                     {/* Header & Tabs */}
                     <div style={{
-                        padding: '0.5rem 1rem', // Compact Header Padding
+                        padding: '0.5rem 1rem',
                         background: 'var(--bg-panel)', borderBottom: '1px solid var(--border)',
                         display: 'flex', justifyContent: 'space-between', alignItems: 'center',
                         flexShrink: 0

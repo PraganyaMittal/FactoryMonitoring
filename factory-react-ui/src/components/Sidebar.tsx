@@ -68,7 +68,7 @@ export default function Sidebar() {
     const [loading, setLoading] = useState(true)
 
     // Sidebar UI State
-    const [width, setWidth] = useState(200)
+    const [width, setWidth] = useState(240)
     const [isCollapsed, setIsCollapsed] = useState(false)
     const [isResizing, setIsResizing] = useState(false)
     const sidebarRef = useRef<HTMLElement>(null)
