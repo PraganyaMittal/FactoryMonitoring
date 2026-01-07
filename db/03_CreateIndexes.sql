@@ -13,11 +13,6 @@ CREATE INDEX IX_ConfigFiles_PCId ON ConfigFiles(PCId);
 CREATE INDEX IX_ConfigFiles_PendingUpdate ON ConfigFiles(PendingUpdate);
 GO
 
--- LogFiles Indexes
-CREATE INDEX IX_LogFiles_PCId ON LogFiles(PCId);
-CREATE INDEX IX_LogFiles_LastModified ON LogFiles(LastModified);
-GO
-
 -- Models Indexes
 CREATE INDEX IX_Models_PCId ON Models(PCId);
 CREATE INDEX IX_Models_IsCurrentModel ON Models(IsCurrentModel);

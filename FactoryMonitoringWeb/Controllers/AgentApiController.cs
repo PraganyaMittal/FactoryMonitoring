@@ -195,50 +195,6 @@ namespace FactoryMonitoringWeb.Controllers
             }
         }
 
-        [HttpPost("updatelog")]
-        public async Task<ActionResult<ApiResponse>> UpdateLog([FromBody] LogUpdateRequest request)
-        {
-            try
-            {
-                var existingLog = await _context.LogFiles
-                    .FirstOrDefaultAsync(l => l.PCId == request.PCId && l.LogFileName == request.LogFileName);
-
-                if (existingLog == null)
-                {
-                    var newLog = new LogFile
-                    {
-                        PCId = request.PCId,
-                        LogContent = request.LogContent,
-                        LogFileName = request.LogFileName,
-                        LastModified = DateTime.Now
-                    };
-                    _context.LogFiles.Add(newLog);
-                }
-                else
-                {
-                    existingLog.LogContent = request.LogContent;
-                    existingLog.LastModified = DateTime.Now;
-                }
-
-                await _context.SaveChangesAsync();
-
-                return Ok(new ApiResponse
-                {
-                    Success = true,
-                    Message = "Log updated successfully"
-                });
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error updating log");
-                return StatusCode(500, new ApiResponse
-                {
-                    Success = false,
-                    Message = $"Log update failed: {ex.Message}"
-                });
-            }
-        }
-
         [HttpPost("synclogs")]
         public async Task<ActionResult<ApiResponse>> SyncLogStructure([FromBody] LogStructureSyncRequest request)
         {

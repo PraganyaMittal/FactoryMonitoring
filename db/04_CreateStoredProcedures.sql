@@ -6,7 +6,7 @@ CREATE PROCEDURE sp_RegisterOrUpdatePC
     @PCNumber INT,
     @IPAddress NVARCHAR(50),
     @ConfigFilePath NVARCHAR(500),
-    @LogFolderPath NVARCHAR(500), -- Renamed from LogFilePath
+    @LogFolderPath NVARCHAR(500),
     @ModelFolderPath NVARCHAR(500),
     @ModelVersion NVARCHAR(20) = '3.5',
     @PCId INT OUTPUT

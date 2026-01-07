@@ -57,7 +57,6 @@ namespace FactoryMonitoringWeb.Models
         // Navigation properties
         public virtual ConfigFile? ConfigFile { get; set; }
         public virtual ICollection<Model> Models { get; set; } = new List<Model>();
-        public virtual ICollection<LogFile> LogFiles { get; set; } = new List<LogFile>();
         public virtual ICollection<AgentCommand> Commands { get; set; } = new List<AgentCommand>();
     }
 }
