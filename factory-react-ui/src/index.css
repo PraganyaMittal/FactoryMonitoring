@@ -808,3 +808,33 @@ select option {
 [data-theme="light"] .sidebar-logo {
     color: var(--text-main);
 }
+
+.sidebar-tooltip {
+    position: fixed;
+    transform: translateY(-50%);
+    background-color: #0f172a; /* Very dark blue/slate */
+    color: #f8fafc;
+    padding: 0.35rem 0.6rem;
+    border-radius: 6px;
+    font-size: 0.75rem;
+    font-weight: 500;
+    pointer-events: none;
+    z-index: 9999; /* Ensure it sits on top of everything */
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3), 0 2px 4px -1px rgba(0, 0, 0, 0.2);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    white-space: nowrap;
+    animation: tooltipFade 0.1s ease-out forwards; /* Fast 100ms fade in */
+}
+
+@keyframes tooltipFade {
+    from {
+        opacity: 0;
+        transform: translateY(-50%) scale(0.95);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(-50%) scale(1);
+    }
+}
+
