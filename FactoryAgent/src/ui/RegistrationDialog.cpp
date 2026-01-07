@@ -1,5 +1,8 @@
 #include "../include/ui/RegistrationDialog.h"
 #include "../include/common/Constants.h"
+#include <commdlg.h>
+#include <shlobj.h>
+#include "../../resource.h"
 
 AgentSettings* RegistrationDialog::settings_ = NULL;
 
@@ -83,9 +86,40 @@ INT_PTR CALLBACK RegistrationDialog::DialogProc(HWND hDlg, UINT message, WPARAM 
             EndDialog(hDlg, IDOK);
             return TRUE;
         }
+
         else if (LOWORD(wParam) == IDCANCEL) {
             EndDialog(hDlg, IDCANCEL);
             return TRUE;
+        }
+        else if (LOWORD(wParam) == IDC_BROWSE_CONFIG) {
+            char filename[MAX_PATH] = "";
+            OPENFILENAMEA ofn;
+            ZeroMemory(&ofn, sizeof(ofn));
+            ofn.lStructSize = sizeof(ofn);
+            ofn.hwndOwner = hDlg;
+            ofn.lpstrFilter = "Config Files (*.ini)\0*.ini\0All Files (*.*)\0*.*\0";
+            ofn.lpstrFile = filename;
+            ofn.nMaxFile = MAX_PATH;
+            ofn.Flags = OFN_FILEMUSTEXIST | OFN_PATHMUSTEXIST;
+
+            if (GetOpenFileNameA(&ofn)) {
+                SetDlgItemTextA(hDlg, IDC_CONFIG_PATH, filename);
+            }
+        }
+        else if (LOWORD(wParam) == IDC_BROWSE_LOG || LOWORD(wParam) == IDC_BROWSE_MODEL) {
+            BROWSEINFOA bi = { 0 };
+            bi.hwndOwner = hDlg;
+            bi.ulFlags = BIF_RETURNONLYFSDIRS | BIF_NEWDIALOGSTYLE;
+            bi.lpszTitle = (LOWORD(wParam) == IDC_BROWSE_LOG) ? "Select Log Folder" : "Select Model Folder";
+
+            LPITEMIDLIST pidl = SHBrowseForFolderA(&bi);
+            if (pidl != 0) {
+                char path[MAX_PATH];
+                if (SHGetPathFromIDListA(pidl, path)) {
+                    SetDlgItemTextA(hDlg, (LOWORD(wParam) == IDC_BROWSE_LOG) ? IDC_LOG_PATH : IDC_MODEL_PATH, path);
+                }
+                CoTaskMemFree(pidl);
+            }
         }
         break;
     }

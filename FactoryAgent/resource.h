@@ -11,6 +11,9 @@
 #define IDC_MODEL_VERSION               1006
 #define IDC_SERVER_URL                  1007
 #define IDC_EXE_NAME                    1008
+#define IDC_BROWSE_CONFIG               1009
+#define IDC_BROWSE_LOG                  1010
+#define IDC_BROWSE_MODEL                1011
 #define IDC_STATIC                      -1
 
 // Next default values for new objects
