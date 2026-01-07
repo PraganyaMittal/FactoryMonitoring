@@ -11,6 +11,8 @@ export default function LongGanttChart({ barrels, onReady }: Props) {
     const chartRef = useRef<HTMLDivElement>(null);
     const observerRef = useRef<ResizeObserver | null>(null);
     const resizeInProgress = useRef(false);
+    // Added to prevent resize bounce on initial mount
+    const isFirstRender = useRef(true);
 
     // REFS to save user's zoom/pan state across re-renders
     const savedXRange = useRef<[number, number] | null>(null);
@@ -262,6 +264,11 @@ export default function LongGanttChart({ barrels, onReady }: Props) {
         observerRef.current = new ResizeObserver((entries) => {
             for (const entry of entries) {
                 if (entry.target === chartRef.current) {
+                    // FIX: Prevent double-render bounce on initial mount
+                    if (isFirstRender.current) {
+                        isFirstRender.current = false;
+                        return;
+                    }
                     window.requestAnimationFrame(() => safeResize());
                 }
             }

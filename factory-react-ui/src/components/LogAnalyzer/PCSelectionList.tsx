@@ -6,6 +6,7 @@ import type { FactoryPC } from '../../types';
 export interface PCWithVersion extends FactoryPC {
     version: string;
     line: number;
+    logFilePath: string;
 }
 
 interface Props {
@@ -29,7 +30,7 @@ export default function PCSelectionList({ pcs, onSelectPC, loading }: Props) {
 
     const [activeTab, setActiveTab] = useState<string>('');
 
-    // Set initial tab to the first version (3.5)
+    // Set initial tab to the first version
     useEffect(() => {
         if (versions.length > 0 && !activeTab) {
             setActiveTab(versions[0]);
@@ -103,34 +104,34 @@ export default function PCSelectionList({ pcs, onSelectPC, loading }: Props) {
                                     gap: '0.5rem',
                                     padding: '0 0.25rem',
                                     marginBottom: '0.5rem',
-                                    color: 'var(--text-dim)',
-                                    fontSize: '0.7rem',
-                                    fontWeight: 600,
+                                    color: 'var(--text-main)',
+                                    fontSize: '0.85rem',
+                                    fontWeight: 700,
                                     textTransform: 'uppercase'
                                 }}>
-                                    <Activity size={10} />
+                                    <Activity size={14} />
                                     Line {lineStr}
                                     <div style={{ flex: 1, height: '1px', background: 'var(--border)' }} />
                                 </div>
 
-                                {/* Square Grid */}
+                                {/* Rectangular Grid */}
                                 <div style={{
                                     display: 'grid',
-                                    // Adjust 80px to control minimum square size
-                                    gridTemplateColumns: 'repeat(auto-fill, minmax(85px, 1fr))',
+                                    gridTemplateColumns: 'repeat(auto-fill, minmax(105px, 1fr))',
                                     gap: '0.5rem'
                                 }}>
                                     {linePCs.map((pc) => (
                                         <motion.div
                                             key={pc.pcId}
-                                            whileHover={{ scale: 1.05, y: -2 }}
-                                            whileTap={{ scale: 0.95 }}
+                                            whileHover={{ scale: 1.02, y: -2 }}
+                                            whileTap={{ scale: 0.98 }}
                                             onClick={() => onSelectPC(pc)}
                                             style={{
-                                                aspectRatio: '1', // Forces perfect square
-                                                background: 'var(--bg-main)',
-                                                border: `1px solid ${pc.isOnline ? 'rgba(16, 185, 129, 0.3)' : 'rgba(239, 68, 68, 0.3)'}`,
-                                                borderRadius: '8px',
+                                                padding: '0.6rem 0.25rem',
+                                                // UPDATED: Added Gradient Background
+                                                background: `linear-gradient(135deg, ${pc.isOnline ? 'var(--success-bg)' : 'var(--danger-bg)'}, var(--bg-card))`,
+                                                border: `3px solid ${pc.isOnline ? 'var(--success)' : 'var(--danger)'}`,
+                                                borderRadius: '6px',
                                                 cursor: 'pointer',
                                                 display: 'flex',
                                                 flexDirection: 'column',
@@ -140,36 +141,31 @@ export default function PCSelectionList({ pcs, onSelectPC, loading }: Props) {
                                                 boxShadow: '0 1px 2px rgba(0,0,0,0.05)'
                                             }}
                                         >
-                                            {/* Status Dot */}
+                                            {/* Status Dot (Top Right) */}
                                             <div style={{
                                                 position: 'absolute',
-                                                top: '6px',
-                                                right: '6px',
+                                                top: '4px',
+                                                right: '4px',
                                                 width: '6px',
                                                 height: '6px',
                                                 borderRadius: '50%',
-                                                background: pc.isOnline ? '#10b981' : '#ef4444',
-                                                boxShadow: pc.isOnline ? '0 0 4px #10b981' : 'none'
+                                                background: pc.isOnline ? 'var(--success)' : 'var(--danger)',
+                                                boxShadow: pc.isOnline ? '0 0 4px var(--success)' : 'none',
+                                                zIndex: 2
                                             }} />
 
                                             {/* IP Address */}
                                             <div style={{
-                                                fontSize: '0.75rem',
+                                                marginTop: '0.6rem',
+                                                fontSize: '0.7rem',
                                                 fontWeight: 600,
                                                 color: 'var(--text-main)',
                                                 textAlign: 'center',
-                                                lineHeight: 1.2
+                                                lineHeight: 1.2,
+                                                letterSpacing: '0.02em',
+                                                whiteSpace: 'nowrap'
                                             }}>
                                                 {pc.ipAddress}
-                                            </div>
-
-                                            <div style={{
-                                                fontSize: '0.6rem',
-                                                color: pc.isOnline ? '#10b981' : '#ef4444',
-                                                marginTop: '4px',
-                                                fontWeight: 500
-                                            }}>
-                                                PC-{pc.pcNumber}
                                             </div>
 
                                         </motion.div>
