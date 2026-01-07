@@ -11,7 +11,6 @@ namespace FactoryMonitoringWeb.Data
 
         public DbSet<FactoryPC> FactoryPCs { get; set; }
         public DbSet<ConfigFile> ConfigFiles { get; set; }
-        public DbSet<LogFile> LogFiles { get; set; }
         public DbSet<Model> Models { get; set; }
         public DbSet<ModelFile> ModelFiles { get; set; }
         public DbSet<ModelDistribution> ModelDistributions { get; set; }
