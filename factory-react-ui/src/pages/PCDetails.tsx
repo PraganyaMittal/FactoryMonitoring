@@ -102,7 +102,7 @@ export default function PCDetailsPage() {
 
             if (result.success && result.commandId) {
                 // Start polling for completion
-                pollDownloadStatus(result.commandId)
+                pollDownloadStatus(result.commandId.toString())
             } else {
                 alert('Failed to start download command.')
                 setIsDownloading(false)
@@ -113,9 +113,10 @@ export default function PCDetailsPage() {
         }
     }
 
-    const pollDownloadStatus = async (commandId: number) => {
+    const pollDownloadStatus = async (commandId: string) => {
         try {
-            const statusResult = await factoryApi.checkDownloadStatus(commandId)
+            const statusResult = await factoryApi.checkDownloadStatus(commandId.toString())
+
 
             if (statusResult.status === 'Completed') {
                 // 1. Success! Trigger browser download

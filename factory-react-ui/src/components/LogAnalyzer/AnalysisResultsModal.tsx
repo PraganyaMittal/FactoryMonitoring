@@ -46,7 +46,7 @@ export default function AnalysisResultsModal({
 
     const [isTransitioning, setIsTransitioning] = useState(false);
     const [isChartReady, setIsChartReady] = useState(false);
-    const [showEscTooltip, setShowEscTooltip] = useState(false);
+    const [showEscTooltip] = useState(false);
 
     const selectedBarrelData = selectedBarrel ? result.barrels.find(b => b.barrelId === selectedBarrel) : null;
 

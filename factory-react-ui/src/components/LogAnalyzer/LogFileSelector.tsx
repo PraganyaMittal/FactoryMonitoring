@@ -32,7 +32,7 @@ export default function LogFileSelector({
     const [isDropdownActive, setIsDropdownActive] = useState(false);
 
     const searchBuffer = useRef<string>("");
-    const searchTimeout = useRef<NodeJS.Timeout | null>(null);
+    const searchTimeout = useRef<number | null>(null);
     const gridRef = useRef<HTMLDivElement>(null);
 
     // =========================================================================

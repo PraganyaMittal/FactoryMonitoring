@@ -6,6 +6,7 @@ import type { FactoryPC } from '../../types';
 export interface PCWithVersion extends FactoryPC {
     version: string;
     line: number;
+    logFilePath: string;
 }
 
 interface Props {

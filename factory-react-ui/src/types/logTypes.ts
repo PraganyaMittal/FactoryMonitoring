@@ -49,3 +49,7 @@ export interface FactoryPC {
     modelVersion: string;
     logFilePath: string;
 }
+
+export interface LogFileStructure {
+    files: LogFileNode[];
+}
