@@ -1,4 +1,4 @@
-﻿import type { LogFileStructure, LogFileContent, AnalysisResult } from '../types/logTypes';
+﻿import type { LogFileStructure, LogFileContent } from '../types/logTypes';
 
 const API_BASE = '/api';
 
