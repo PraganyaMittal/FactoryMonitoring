@@ -96,3 +96,7 @@ export interface PCUpdateRequest {
     modelFolderPath: string
     modelVersion: string
 }
+
+export interface PCListResponse {
+    lines: LineGroup[]
+}

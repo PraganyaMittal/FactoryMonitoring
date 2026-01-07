@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from 'react'
-import { Package, Upload, Trash2, Rocket, Download, X, HardDrive, AlertTriangle, Wifi } from 'lucide-react'
+import { Package, Upload, Trash2, Rocket, Download, X, HardDrive, AlertTriangle } from 'lucide-react'
 import { factoryApi } from '../services/api'
 import type { ModelFile, ApplyModelRequest, FactoryPC } from '../types'
 import { LoadingOverlay } from '../components/LoadingOverlay'
@@ -68,7 +68,7 @@ export default function ModelLibrary() {
     }
 
     const openConfirm = (title: string, message: string, onConfirm: () => void) => {
-        setConfirmModal({ title, message, onConfirm, onCancel: () => setConfirmModal(null) })
+        setConfirmModal({ title, message, onConfirm })
     }
 
     useEffect(() => { loadData() }, [])

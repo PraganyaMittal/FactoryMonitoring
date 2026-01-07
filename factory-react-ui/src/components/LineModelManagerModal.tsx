@@ -6,6 +6,12 @@ import { LoadingOverlay } from './LoadingOverlay'
 import { Toast } from './Toast'
 import { ConfirmModal } from './ConfirmModal'
 import { OfflineAlertModal } from './OfflineAlertModal'
+type ConfirmState = {
+    title: string
+    message: string
+    onConfirm: () => void
+    onCancel: () => void
+}
 
 interface Props {
     lineNumber: number
@@ -32,7 +38,8 @@ export default function LineModelManagerModal({ lineNumber, version, onClose, on
 
     // --- UI UX STATE ---
     const [toast, setToast] = useState<{ msg: string, type: 'success' | 'error' | 'info' } | null>(null)
-    const [confirmModal, setConfirmModal] = useState<{ title: string, message: string, onConfirm: () => void } | null>(null)
+
+    const [confirmModal, setConfirmModal] = useState<ConfirmState | null>(null)
     const [downloadSelector, setDownloadSelector] = useState<{ model: LineModelOption, candidates: any[] } | null>(null)
     const [isDownloading, setIsDownloading] = useState(false)
     const toastTimer = useRef<any>(null)

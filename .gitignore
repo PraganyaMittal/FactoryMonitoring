@@ -1,6 +1,33 @@
+# Build Headers
 bin/
 obj/
-.vs/
+*.obj
+*.exe
+*.pdb
+*.idb
+*.ilk
+*.tlog
+*.suo
+*.user
+*.aps
+*.res
+*.pch
+*.lib
+*.dll
+*.ipch
+
+# Node
 node_modules/
 .env
 *.log
+
+# VS
+.vs/
+x64/
+Debug/
+Release/
+
+# Agent
+FactoryAgent/x64/
+FactoryAgent/Debug/
+FactoryAgent/Release/

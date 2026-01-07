@@ -1,6 +1,6 @@
-import { useEffect, useState, useRef } from 'react'
+import { useEffect, useState, useRef, useCallback } from 'react'
 import { useParams, useSearchParams } from 'react-router-dom'
-import { LayoutGrid, List, Activity, Filter, ChevronRight, Zap, FileCode, AlertCircle, X } from 'lucide-react'
+import { LayoutGrid, List, Activity, ChevronRight, Zap, FileCode, AlertCircle, X } from 'lucide-react'
 import { factoryApi } from '../services/api'
 import { eventBus, EVENTS } from '../utils/eventBus'
 import PCCard from '../components/PCCard'
@@ -8,12 +8,19 @@ import PCDetailsModal from '../components/PCDetailsModal'
 import LineModelManagerModal from '../components/LineModelManagerModal'
 import type { LineGroup, FactoryPC } from '../types'
 
+type DashboardData = {
+    total: number
+    online: number
+    offline: number
+    lines: LineGroup[]
+}
+
 export default function Dashboard() {
     const { version } = useParams()
     const [searchParams] = useSearchParams()
     const lineParam = searchParams.get('line')
 
-    const [data, setData] = useState<{ total: number; online: number; offline: number; lines: LineGroup[] } | null>(null)
+    const [data, setData] = useState<DashboardData | null>(null)
     const [viewMode, setViewMode] = useState<'cards' | 'list'>('cards')
     const [loading, setLoading] = useState(true)
     const [selectedPC, setSelectedPC] = useState<FactoryPC | null>(null)
@@ -21,6 +28,31 @@ export default function Dashboard() {
     const [expandedLines, setExpandedLines] = useState<Record<number, boolean>>({})
     const [showComplianceModal, setShowComplianceModal] = useState<{ lineNumber: number, nonCompliantPCs: FactoryPC[] } | null>(null)
     const mounted = useRef(true)
+
+    const loadData = useCallback(async (isInitial: boolean) => {
+        if (isInitial) setLoading(true)
+        try {
+            const targetLine = lineParam ? parseInt(lineParam) : undefined
+            const res = await factoryApi.getPCs(version, targetLine)
+
+            const allPCs = res.lines.flatMap(l => l.pcs)
+            const online = allPCs.filter(pc => pc.isOnline).length
+            const offline = allPCs.length - online
+
+            const dashboardData: DashboardData = {
+                total: allPCs.length,
+                online,
+                offline,
+                lines: res.lines
+            }
+
+            if (mounted.current) setData(dashboardData)
+        } catch (err) {
+            console.error(err)
+        } finally {
+            if (isInitial && mounted.current) setLoading(false)
+        }
+    }, [lineParam, version])
 
     useEffect(() => {
         mounted.current = true
@@ -36,7 +68,7 @@ export default function Dashboard() {
         const handleRefresh = () => loadData(false)
         eventBus.on(EVENTS.REFRESH_DASHBOARD, handleRefresh)
         return () => eventBus.off(EVENTS.REFRESH_DASHBOARD, handleRefresh)
-    }, [])
+    }, [loadData])
 
     useEffect(() => {
         if (data && data.lines.length > 0) {
@@ -54,19 +86,7 @@ export default function Dashboard() {
         }
     }, [data])
 
-    const loadData = async (isInitial: boolean) => {
-        if (isInitial) setLoading(true)
-        try {
-            const targetLine = lineParam ? parseInt(lineParam) : undefined
-            const res = await factoryApi.getPCs(version, targetLine)
 
-            if (mounted.current) setData(res)
-        } catch (err) {
-            console.error(err)
-        } finally {
-            if (isInitial && mounted.current) setLoading(false)
-        }
-    }
 
     const toggleLine = (lineNumber: number) => {
         setExpandedLines(prev => ({ ...prev, [lineNumber]: !prev[lineNumber] }))
