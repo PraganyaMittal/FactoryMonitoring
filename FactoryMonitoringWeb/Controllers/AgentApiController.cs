@@ -295,6 +295,8 @@ namespace FactoryMonitoringWeb.Controllers
             }
         }
 
+        // Location: FactoryMonitoringWeb/Controllers/AgentApiController.cs
+
         [HttpPost("commandresult")]
         public async Task<ActionResult<ApiResponse>> CommandResult([FromBody] CommandResultRequest request)
         {
@@ -303,17 +305,32 @@ namespace FactoryMonitoringWeb.Controllers
                 var command = await _context.AgentCommands.FindAsync(request.CommandId);
                 if (command == null)
                 {
-                    return NotFound(new ApiResponse
-                    {
-                        Success = false,
-                        Message = "Command not found"
-                    });
+                    return NotFound(new ApiResponse { Success = false, Message = "Command not found" });
                 }
 
+                // Update command status
                 command.Status = request.Status;
                 command.ResultData = request.ResultData;
                 command.ErrorMessage = request.ErrorMessage;
                 command.ExecutedDate = DateTime.Now;
+
+                // === LOGIC START: Finalize Deletion ===
+                // If the Agent successfully reset, NOW we delete the PC from the database.
+                if (command.CommandType == "ResetAgent" && request.Status == "Completed")
+                {
+                    var pc = await _context.FactoryPCs
+                        .Include(p => p.ConfigFile)
+                        .Include(p => p.Models)
+                        .FirstOrDefaultAsync(p => p.PCId == command.PCId);
+
+                    if (pc != null)
+                    {
+                        // Remove the PC (Cascade delete will clean up this command too)
+                        _context.FactoryPCs.Remove(pc);
+                        _logger.LogInformation($"PC {pc.PCId} permanently deleted after Agent confirmation.");
+                    }
+                }
+                // === LOGIC END ===
 
                 await _context.SaveChangesAsync();
 

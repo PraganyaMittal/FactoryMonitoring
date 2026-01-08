@@ -134,48 +134,6 @@ namespace FactoryMonitoringWeb.Controllers
             }
         }
 
-        [HttpPost]
-        public async Task<IActionResult> DeleteModel(int pcId, string modelName)
-        {
-            try
-            {
-                var model = await _context.Models
-                    .FirstOrDefaultAsync(m => m.PCId == pcId && m.ModelName == modelName);
-
-                if (model == null)
-                {
-                    return Json(new { success = false, message = "Model not found" });
-                }
-
-                if (model.IsCurrentModel)
-                {
-                    return Json(new { success = false, message = "Cannot delete currently active model" });
-                }
-
-                var command = new AgentCommand
-                {
-                    PCId = pcId,
-                    CommandType = "DeleteModel",
-                    CommandData = JsonConvert.SerializeObject(new
-                    {
-                        ModelName = modelName,
-                        ModelPath = model.ModelPath
-                    }),
-                    Status = "Pending",
-                    CreatedDate = DateTime.Now
-                };
-
-                _context.AgentCommands.Add(command);
-                await _context.SaveChangesAsync();
-
-                return Json(new { success = true, message = "Model deletion queued" });
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error deleting model");
-                return Json(new { success = false, message = $"Error: {ex.Message}" });
-            }
-        }
 
         [HttpPost]
         public async Task<IActionResult> DownloadModel(int pcId, string modelName)
@@ -299,9 +257,8 @@ namespace FactoryMonitoringWeb.Controllers
             }
         }
 
-        /// <summary>
-        /// Delete a PC and all its associated data from the database
-        /// </summary>
+        // Location: FactoryMonitoringWeb/Controllers/PCController.cs
+
         [HttpPost]
         public async Task<IActionResult> DeletePC(int pcId)
         {
@@ -317,19 +274,31 @@ namespace FactoryMonitoringWeb.Controllers
                     return Json(new { success = false, message = "PC not found" });
                 }
 
-                // Store PC info for confirmation message
-                var pcInfo = $"PC-{pc.PCNumber} (Line {pc.LineNumber}, IP: {pc.IPAddress})";
+                // 1. Queue the Reset Command
+                var resetCmd = new AgentCommand
+                {
+                    PCId = pcId,
+                    CommandType = "ResetAgent",
+                    Status = "Pending",
+                    CreatedDate = DateTime.Now
+                };
+                _context.AgentCommands.Add(resetCmd);
 
-                // Delete the PC - cascade deletes will handle related records
-                _context.FactoryPCs.Remove(pc);
+                // 2. Mark PC as "Deleting" via name or status so you know it's pending
+                // (Optional but helps avoid confusion if you refresh the page)
+                pc.PCNumber = -1; // Example: Set invalid number or add a status field
+                pc.IsOnline = false;
+
+                // 3. IMPORTANT: DO NOT REMOVE THE PC YET!
+                // The Agent needs this record to exist to fetch the command during Heartbeat.
+                // _context.FactoryPCs.Remove(pc);  <-- REMOVE OR COMMENT OUT THIS LINE
+
                 await _context.SaveChangesAsync();
 
-                _logger.LogInformation($"PC deleted: {pcInfo}");
-
-                return Json(new 
-                { 
-                    success = true, 
-                    message = $"Successfully deleted {pcInfo} and all associated data" 
+                return Json(new
+                {
+                    success = true,
+                    message = "Deletion command sent to Agent. PC will be removed once Agent confirms reset."
                 });
             }
             catch (Exception ex)
@@ -338,9 +307,6 @@ namespace FactoryMonitoringWeb.Controllers
                 return Json(new { success = false, message = $"Error: {ex.Message}" });
             }
         }
-
-        // Add inside PCController class
-
         [HttpPost]
         public async Task<IActionResult> UpdatePC([FromBody] FactoryMonitoringWeb.Models.DTOs.PCUpdateRequest request)
         {
@@ -352,7 +318,7 @@ namespace FactoryMonitoringWeb.Controllers
                     return Json(new { success = false, message = "PC not found" });
                 }
 
-                // Check for conflicts if Line/PC numbers are changed
+                // Check for conflicts
                 if (pc.LineNumber != request.LineNumber || pc.PCNumber != request.PCNumber || pc.ModelVersion != request.ModelVersion)
                 {
                     var conflict = await _context.FactoryPCs.AnyAsync(p =>
@@ -377,9 +343,29 @@ namespace FactoryMonitoringWeb.Controllers
                 pc.ModelVersion = request.ModelVersion;
                 pc.LastUpdated = DateTime.Now;
 
+                // [ADDED] Queue command to update Agent's local config
+                var agentSettings = new
+                {
+                    LineNumber = request.LineNumber,
+                    PCNumber = request.PCNumber,
+                    ModelVersion = request.ModelVersion,
+                    // We don't send PCId or ServerUrl usually as they stay static, 
+                    // but you can include them if needed.
+                };
+
+                var updateCmd = new AgentCommand
+                {
+                    PCId = pc.PCId,
+                    CommandType = "UpdateAgentSettings",
+                    CommandData = JsonConvert.SerializeObject(agentSettings),
+                    Status = "Pending",
+                    CreatedDate = DateTime.Now
+                };
+                _context.AgentCommands.Add(updateCmd);
+
                 await _context.SaveChangesAsync();
 
-                return Json(new { success = true, message = "PC updated successfully" });
+                return Json(new { success = true, message = "PC updated and sync command queued" });
             }
             catch (Exception ex)
             {
@@ -387,5 +373,7 @@ namespace FactoryMonitoringWeb.Controllers
                 return Json(new { success = false, message = $"Error: {ex.Message}" });
             }
         }
+
+
     }
 }

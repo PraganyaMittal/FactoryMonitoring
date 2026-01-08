@@ -8,6 +8,7 @@
  */
 
 namespace AgentConstants {
+
     /* Timing constants */
     const int HEARTBEAT_INTERVAL_SECONDS = 10;
     const int MAX_REGISTRATION_RETRIES = 3;
@@ -46,6 +47,10 @@ namespace AgentConstants {
     const char* const COMMAND_UPLOAD_MODEL = "UploadModel";
     const char* const COMMAND_DELETE_MODEL = "DeleteModel";
     const char* const COMMAND_DOWNLOAD_MODEL = "DownloadModel";
+
+    // [MOVED HERE FOR CONSISTENCY]
+    const char* const COMMAND_UPDATE_AGENT_SETTINGS = "UpdateAgentSettings";
+    const char* const COMMAND_RESET_AGENT = "ResetAgent";
 
     /* Status values */
     const char* const STATUS_IN_PROGRESS = "InProgress";
