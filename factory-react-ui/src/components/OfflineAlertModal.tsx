@@ -1,13 +1,32 @@
-import { X, Wifi } from 'lucide-react'
+import { useEffect } from 'react'
+import { X, Wifi, AlertTriangle } from 'lucide-react'
 
 interface OfflineAlertModalProps {
     offlineCandidates: any[]
     onCancel: () => void
-    onProceedOnlineOnly: () => void
+    onProceedOnlineOnly?: () => void
     actionLabel?: string
+    isBlocking?: boolean
 }
 
-export const OfflineAlertModal = ({ offlineCandidates, onCancel, onProceedOnlineOnly, actionLabel }: OfflineAlertModalProps) => {
+export const OfflineAlertModal = ({
+    offlineCandidates,
+    onCancel,
+    onProceedOnlineOnly,
+    actionLabel,
+    isBlocking = false
+}: OfflineAlertModalProps) => {
+
+    // Enable closing on 'Escape' key press
+    useEffect(() => {
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if (e.key === 'Escape') {
+                onCancel()
+            }
+        }
+        window.addEventListener('keydown', handleKeyDown)
+        return () => window.removeEventListener('keydown', handleKeyDown)
+    }, [onCancel])
 
     // Group by line number
     const grouped = offlineCandidates.reduce((acc: any, pc: any) => {
@@ -22,13 +41,16 @@ export const OfflineAlertModal = ({ offlineCandidates, onCancel, onProceedOnline
             <div className="modal-content" onClick={e => e.stopPropagation()} style={{ maxWidth: '500px', height: 'auto', border: '1px solid var(--danger)' }}>
                 <div className="modal-header">
                     <h3 style={{ fontSize: '1.05rem', margin: 0, color: 'var(--danger)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                        <Wifi size={18} /> Offline Agents Detected
+                        {isBlocking ? <AlertTriangle size={18} /> : <Wifi size={18} />}
+                        {isBlocking ? 'Action Blocked' : 'Offline Agents Detected'}
                     </h3>
                     <button onClick={onCancel} className="btn btn-secondary btn-icon"><X size={18} /></button>
                 </div>
                 <div className="modal-body">
                     <div style={{ marginBottom: '1rem', background: 'var(--bg-hover)', padding: '0.75rem', borderRadius: 'var(--radius-md)' }}>
-                        <p style={{ fontSize: '0.9rem', margin: '0 0 0.5rem 0', fontWeight: 600 }}>The following PCs are OFFLINE:</p>
+                        <p style={{ fontSize: '0.9rem', margin: '0 0 0.5rem 0', fontWeight: 600 }}>
+                            {isBlocking ? 'The target agent is currently OFFLINE:' : 'The following PCs are OFFLINE:'}
+                        </p>
 
                         <div style={{ maxHeight: '150px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                             {Object.entries(grouped).map(([line, pcs]: [string, any]) => (
@@ -47,14 +69,23 @@ export const OfflineAlertModal = ({ offlineCandidates, onCancel, onProceedOnline
 
                     </div>
                     <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '1.5rem' }}>
-                        Changes cannot be applied to offline agents. Proceeding will apply the action <b>ONLY to the online PCs</b>.
+                        {isBlocking
+                            ? 'You cannot edit or delete this agent while it is offline. Please ensure the PC is connected and running the agent to perform this action.'
+                            : 'Changes cannot be applied to offline agents. Proceeding will apply the action ONLY to the online PCs.'
+                        }
                     </p>
 
                     <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end' }}>
-                        <button className="btn btn-secondary" onClick={onCancel}>Cancel</button>
-                        <button className="btn btn-primary" onClick={onProceedOnlineOnly}>
-                            {actionLabel || 'Proceed with Online Only'}
-                        </button>
+                        {isBlocking ? (
+                            <button className="btn btn-secondary" onClick={onCancel}>Close</button>
+                        ) : (
+                            <>
+                                <button className="btn btn-secondary" onClick={onCancel}>Cancel</button>
+                                <button className="btn btn-primary" onClick={onProceedOnlineOnly}>
+                                    {actionLabel || 'Proceed with Online Only'}
+                                </button>
+                            </>
+                        )}
                     </div>
                 </div>
             </div>
