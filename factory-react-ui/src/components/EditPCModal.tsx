@@ -16,7 +16,7 @@ export default function EditPCModal({ pc, onClose, onSuccess }: Props) {
         pcNumber: pc.pcNumber,
         ipAddress: pc.ipAddress,
         configFilePath: pc.configFilePath,
-        logFolderPath: pc.logFilePath,
+        logFolderPath: (pc as any).logFolderPath || pc.logFilePath || '',
         modelFolderPath: pc.modelFolderPath,
         modelVersion: pc.modelVersion
     })
