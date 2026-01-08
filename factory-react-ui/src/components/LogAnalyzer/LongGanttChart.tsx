@@ -29,6 +29,25 @@ export default function LongGanttChart({ barrels, onReady }: Props) {
     const BARREL_COLORS = ['#3b82f6', '#10b981', '#8b5cf6'];
 
     const chartData = useMemo(() => {
+        // PRE-CALCULATE WAITING TIMES
+        // We need to calculate waiting time per barrel before flattening
+        const waitTimeMap = new Map<string, number>(); // Key: `${barrelId}_${operationName}`
+
+        barrels.forEach(barrel => {
+            // Sort this barrel's operations by global start time
+            const sortedOps = [...barrel.operations].sort((a, b) => a.globalStartTime - b.globalStartTime);
+
+            sortedOps.forEach((op, index) => {
+                const nextOp = sortedOps[index + 1];
+                let wait = 0;
+                if (nextOp) {
+                    wait = Math.max(0, nextOp.globalStartTime - op.globalEndTime);
+                }
+                // Use a composite key to ensure uniqueness in the map
+                waitTimeMap.set(`${barrel.barrelId}_${op.operationName}`, wait);
+            });
+        });
+
         const allOps = barrels.flatMap(b => b.operations);
 
         const opStartMap = new Map<string, number>();
@@ -53,7 +72,6 @@ export default function LongGanttChart({ barrels, onReady }: Props) {
             base: allOps.map(op => op.globalStartTime),
             orientation: 'h',
             visible: 'legendonly',
-            // FIX: Set explicit width to keep bars thin
             width: 0.4,
             marker: {
                 color: '#fbbf24',
@@ -79,7 +97,6 @@ export default function LongGanttChart({ barrels, onReady }: Props) {
             x: allOps.map(op => op.actualDuration),
             base: allOps.map(op => op.globalStartTime),
             orientation: 'h',
-            // FIX: Set explicit width to keep bars thin
             width: 0.4,
             marker: {
                 color: allOps.map(op => BARREL_COLORS[parseInt(op.barrelId) % 3]),
@@ -92,17 +109,20 @@ export default function LongGanttChart({ barrels, onReady }: Props) {
             text: allOps.map(op => `${op.actualDuration}`),
             textposition: 'inside',
             textfont: { size: 10, color: '#000000', family: 'JetBrains Mono, monospace', weight: 700 },
+            // CustomData: [BarrelID, EndTime, DelayStatus, WaitingTime]
+            customdata: allOps.map(op => [
+                op.barrelId,
+                (op.globalStartTime + op.actualDuration).toFixed(0),
+                op.actualDuration > op.idealDuration ? '⚠ <b>Delayed</b>' : '',
+                waitTimeMap.get(`${op.barrelId}_${op.operationName}`) ?? 0
+            ]),
             hovertemplate:
                 '<b>%{y}</b><br>' +
                 'Barrel ID: <b>%{customdata[0]}</b><br>' +
                 'Start: %{base:.0f} ms<br>' +
                 'End: %{customdata[1]} ms<br>' +
+                'Wait: <b>%{customdata[3]} ms</b><br>' +
                 '%{customdata[2]}<extra></extra>',
-            customdata: allOps.map(op => [
-                op.barrelId,
-                (op.globalStartTime + op.actualDuration).toFixed(0),
-                op.actualDuration > op.idealDuration ? '⚠ <b>Delayed</b>' : '',
-            ]),
             showlegend: true
         });
 
@@ -169,7 +189,7 @@ export default function LongGanttChart({ barrels, onReady }: Props) {
                 range: savedYRange.current || undefined
             },
             barmode: 'group',
-            bargap: 0.2, // Reset to standard gap, since width is controlled explicitly
+            bargap: 0.2,
             bargroupgap: 0,
             plot_bgcolor: '#0b1121',
             paper_bgcolor: '#0b1121',
