@@ -28,14 +28,47 @@ export default function OperationGanttChart({ operations, barrelId, onReady }: P
     }, []);
 
     const chartData = useMemo(() => {
+        // Sort by sequence for the Y-axis order
         const sortedOps = [...operations].sort((a, b) => a.sequence - b.sequence);
-        return { sortedOps };
+
+        // CALCULATE WAITING TIME
+        // 1. Sort a copy strictly by start time to determine chronological order
+        const timeSorted = [...operations].sort((a, b) => a.startTime - b.startTime);
+
+        // 2. Map waiting times by operation name (or unique ID if available)
+        // Wait Time = (Next Op Start Time) - (Current Op End Time)
+        const waitTimeMap = new Map<string, number>();
+
+        timeSorted.forEach((op, index) => {
+            const nextOp = timeSorted[index + 1];
+            if (nextOp) {
+                // If overlap (next starts before current ends), wait time is 0
+                const wait = Math.max(0, nextOp.startTime - op.endTime);
+                waitTimeMap.set(op.operationName, wait);
+            } else {
+                // Last operation has 0 wait time
+                waitTimeMap.set(op.operationName, 0);
+            }
+        });
+
+        return { sortedOps, waitTimeMap };
     }, [operations]);
 
     const updateChart = useCallback(() => {
         if (!chartRef.current || operations.length === 0) return;
 
-        const { sortedOps } = chartData;
+        const { sortedOps, waitTimeMap } = chartData;
+
+        // Helper to retrieve wait time
+        const getWait = (name: string) => waitTimeMap.get(name) ?? 0;
+
+        // Common font settings for better readability
+        const barTextFont = {
+            size: 11,
+            color: '#78350f',
+            family: 'JetBrains Mono, monospace',
+            weight: 900
+        };
 
         const idealTrace = {
             type: 'bar' as const,
@@ -45,14 +78,13 @@ export default function OperationGanttChart({ operations, barrelId, onReady }: P
             name: 'Ideal Time',
             orientation: 'h' as const,
             offsetgroup: '1',
-            marker: { color: '#fbbf24', line: { color: '#f59e0b', width: 1 } },
+            marker: { color: '#fbbf24', line: { color: '#b45309', width: 1 }},
             text: sortedOps.map(op => `${op.idealDuration}ms`),
             textposition: 'inside' as const,
+            constraintext: 'none',
             textfont: {
-                size: 13,
-                color: '#78350f',
-                family: 'JetBrains Mono, monospace',
-                weight: 900 // CHANGED: Extra Bold
+                ...barTextFont,
+                color: '#0f172a'
             },
             hoverinfo: 'text',
             hovertext: sortedOps.map(op => `<b>${op.operationName}</b><br>Ideal Time: <b>${op.idealDuration} ms</b>`)
@@ -66,17 +98,28 @@ export default function OperationGanttChart({ operations, barrelId, onReady }: P
             name: 'Actual (On Time)',
             orientation: 'h' as const,
             offsetgroup: '2',
-            marker: { color: '#38bdf8', line: { color: '#38bdf8', width: 2 } },
+
+            marker: { color: '#38bdf8', line: { color: '#0369a1', width: 1 }},
             text: sortedOps.map(op => op.actualDuration <= op.idealDuration ? `${op.actualDuration}ms` : ''),
             textposition: 'inside' as const,
+            constraintext: 'none',
             textfont: {
-                size: 13,
-                color: '#0f172a',
-                family: 'JetBrains Mono, monospace',
-                weight: 900 // CHANGED: Extra Bold
+                ...barTextFont,
+                color: '#0f172a'
             },
-            customdata: sortedOps.map(op => [op.startTime, op.endTime, op.actualDuration]),
-            hovertemplate: '<b>%{y}</b><br>Start: <b>%{customdata[0]} ms</b><br>End: <b>%{customdata[1]} ms</b><br>Duration: <b>%{customdata[2]} ms</b><extra></extra>'
+            customdata: sortedOps.map(op => [
+                op.startTime,
+                op.endTime,
+                op.actualDuration,
+                getWait(op.operationName)
+            ]),
+            hovertemplate:
+                '<b>%{y}</b><br>' +
+                'Start: <b>%{customdata[0]} ms</b><br>' +
+                'End: <b>%{customdata[1]} ms</b><br>' +
+                'Duration: <b>%{customdata[2]} ms</b><br>' +
+                'Wait: <b>%{customdata[3]} ms</b>' +
+                '<extra></extra>'
         };
 
         const delayedTrace = {
@@ -87,17 +130,28 @@ export default function OperationGanttChart({ operations, barrelId, onReady }: P
             name: 'Actual (Delayed)',
             orientation: 'h' as const,
             offsetgroup: '2',
-            marker: { color: '#ef4444', line: { color: '#dc2626', width: 2 } },
+
+            marker: { color: '#ef4444', line: { color: '#dc2626', width: 1 } },
             text: sortedOps.map(op => op.actualDuration > op.idealDuration ? `${op.actualDuration}ms` : ''),
             textposition: 'inside' as const,
+            constraintext: 'none',
             textfont: {
-                size: 13,
-                color: '#0f172a',
-                family: 'JetBrains Mono, monospace',
-                weight: 900 // CHANGED: Extra Bold
+                ...barTextFont,
+                color: '#0f172a'
             },
-            customdata: sortedOps.map(op => [op.startTime, op.endTime, op.actualDuration]),
-            hovertemplate: '<b>%{y}</b><br>Start: <b>%{customdata[0]} ms</b><br>End: <b>%{customdata[1]} ms</b><br>Duration: <b>%{customdata[2]} ms</b><br>⚠ Delayed<extra></extra>'
+            customdata: sortedOps.map(op => [
+                op.startTime,
+                op.endTime,
+                op.actualDuration,
+                getWait(op.operationName)
+            ]),
+            hovertemplate:
+                '<b>%{y}</b><br>' +
+                'Start: <b>%{customdata[0]} ms</b><br>' +
+                'End: <b>%{customdata[1]} ms</b><br>' +
+                'Duration: <b>%{customdata[2]} ms</b><br>' +
+                'Wait: <b>%{customdata[3]} ms</b><br>' +
+                '⚠ Delayed<extra></extra>'
         };
 
         const layout: Partial<Plotly.Layout> = {
@@ -107,8 +161,7 @@ export default function OperationGanttChart({ operations, barrelId, onReady }: P
                 gridcolor: '#334155',
                 zeroline: false,
                 automargin: true,
-                autorange: true, // ENABLED: Auto-scale
-                // REMOVED: range: xRange 
+                autorange: true,
             },
             yaxis: {
                 title: { text: 'Operation', font: { size: 12, color: '#f8fafc', family: 'Inter, sans-serif', weight: 600 }, standoff: 10 },
@@ -118,8 +171,8 @@ export default function OperationGanttChart({ operations, barrelId, onReady }: P
                 zeroline: false
             },
             barmode: 'group' as const,
-            bargap: 0.25,
-            bargroupgap: 0.1,
+            bargap: 0.06,
+            bargroupgap: 0,
             plot_bgcolor: '#0b1121',
             paper_bgcolor: '#0b1121',
             margin: { l: 10, r: 10, t: 0, b: 40 },
@@ -141,7 +194,7 @@ export default function OperationGanttChart({ operations, barrelId, onReady }: P
 
         const config: Partial<Plotly.Config> = {
             responsive: true,
-            displayModeBar: true, // Kept as requested
+            displayModeBar: true,
             displaylogo: false,
             scrollZoom: true,
             modeBarButtonsToRemove: ['toImage', 'sendDataToCloud', 'select2d', 'lasso2d']
