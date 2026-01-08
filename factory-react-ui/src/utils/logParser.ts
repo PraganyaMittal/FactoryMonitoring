@@ -101,11 +101,47 @@ export function parseLogContent(content: string, fileName?: string): AnalysisRes
             op.endTime = op.endTime - minStartTime;
         });
 
-        // Calculate total execution time (Wall Clock Time for this barrel)
-        // Since we normalized, max(endTime) is the duration
-        const totalExecutionTime = operations.length > 0
-            ? Math.max(...operations.map(op => op.endTime))
-            : 0;
+        // --- CALCULATE TOTAL EXECUTION TIME ---
+        // Formula: (End Last - Start First) - Total Waiting Time
+        let totalExecutionTime = 0;
+
+        if (operations.length > 0) {
+            // 1. Calculate Start Time of First Operation (Normalized, so effectively 0)
+            const startFirst = operations[0].startTime;
+
+            // 2. Calculate End Time of Last Operation (Max End Time found in the batch)
+            // Note: Since ops are sorted by Start Time, the last item isn't necessarily the one that ends last.
+            const endLast = Math.max(...operations.map(op => op.endTime));
+
+            // 3. Calculate Total Wall Clock Time
+            const totalWallTime = endLast - startFirst;
+
+            // 4. Calculate Total Waiting Time
+            // Waiting Time = Sum of gaps where the machine is doing nothing.
+            // We track the 'currentEnd' of the active block. If the next op starts AFTER the current block ends, that's a wait.
+            let totalWaitingTime = 0;
+            let currentActiveEnd = operations[0].endTime;
+
+            for (let i = 1; i < operations.length; i++) {
+                const op = operations[i];
+
+                if (op.startTime > currentActiveEnd) {
+                    // GAP DETECTED: The next operation starts after the current active block has finished.
+                    const waitGap = op.startTime - currentActiveEnd;
+                    totalWaitingTime += waitGap;
+
+                    // Reset the active block end to this new operation's end
+                    currentActiveEnd = op.endTime;
+                } else {
+                    // OVERLAP / PARALLEL: The operation started while the previous block was still active.
+                    // Just extend the active block if this operation ends later.
+                    currentActiveEnd = Math.max(currentActiveEnd, op.endTime);
+                }
+            }
+
+            // 5. Apply Formula
+            totalExecutionTime = totalWallTime - totalWaitingTime;
+        }
 
         barrels.push({
             barrelId: barrelId.toString(),

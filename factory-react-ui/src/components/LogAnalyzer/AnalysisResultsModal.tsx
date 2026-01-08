@@ -13,7 +13,6 @@ interface Props {
     onClose: () => void;
 }
 
-// Compact Button Style
 const btnStyle = {
     padding: '0.25rem',
     display: 'flex',
@@ -114,11 +113,9 @@ export default function AnalysisResultsModal({
                         overflow: 'hidden'
                     }}>
 
-                        {/* --- TOP: SEQUENCE GANTT CHART (70%) --- */}
                         <motion.div
-                            // REMOVED: layout prop to stop bounce
                             style={{
-                                height: expandedView === 'barrel' ? '0%' : expandedView === 'gantt' ? '100%' : '70%',
+                                height: expandedView === 'barrel' ? '0%' : expandedView === 'gantt' ? '100%' : '72%',
                                 width: '100%',
                                 display: expandedView === 'barrel' ? 'none' : 'flex',
                                 flexDirection: 'column',
@@ -141,11 +138,9 @@ export default function AnalysisResultsModal({
                             </div>
                         </motion.div>
 
-                        {/* --- BOTTOM: BARREL COMPARISON (30%) --- */}
                         <motion.div
-                            // REMOVED: layout prop to stop bounce
                             style={{
-                                height: expandedView === 'gantt' ? '0%' : expandedView === 'barrel' ? '100%' : '30%',
+                                height: expandedView === 'gantt' ? '0%' : expandedView === 'barrel' ? '100%' : '28%',
                                 width: '100%',
                                 display: expandedView === 'gantt' ? 'none' : 'flex',
                                 flexDirection: 'column',

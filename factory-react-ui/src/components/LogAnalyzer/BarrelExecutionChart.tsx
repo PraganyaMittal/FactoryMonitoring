@@ -35,11 +35,7 @@ export default function BarrelExecutionChart({ barrels, selectedBarrel, onBarrel
         const xData = barrels.map(b => b.barrelId);
         const yData = barrels.map(b => b.totalExecutionTime);
 
-        // REMOVED: Fixed yRange calculation
-        // const maxTime = Math.max(...yData, 0);
-        // const yRange = [0, maxTime * 1.15]; 
-
-        const colors = barrels.map(b => b.barrelId === selectedBarrel ? '#38bdf8' : '#475569');
+        const colors = barrels.map(b => b.barrelId === selectedBarrel ? '#38bdf8' : '#64748b');
 
         const calculateTickGap = (visibleStart: number, visibleEnd: number) => {
             const visibleBarrels = visibleEnd - visibleStart;
@@ -47,6 +43,14 @@ export default function BarrelExecutionChart({ barrels, selectedBarrel, onBarrel
             const pixelsPerTick = 70;
             const targetTickCount = Math.floor(chartWidth / pixelsPerTick);
             return Math.max(1, Math.ceil(visibleBarrels / targetTickCount));
+        };
+
+        const formatBarText = (time: number) => {
+            const GAP = '';
+            const SEPARATOR_GAP = '\u2009\u200A';
+            const spacedNumber = time.toFixed(0);
+            const unit = 'ms';
+            return `${spacedNumber}${SEPARATOR_GAP}${unit}`;
         };
 
         const trace = {
@@ -60,9 +64,10 @@ export default function BarrelExecutionChart({ barrels, selectedBarrel, onBarrel
                     width: 2
                 }
             },
-            text: yData.map(y => `${y.toFixed(0)}ms`),
-            textposition: 'outside' as const,
-            textfont: { size: 10, color: '#f8fafc', family: 'JetBrains Mono, monospace', weight: 600 },
+            text: yData.map(y => formatBarText(y)),
+            textposition: 'auto' as const,
+            textangle: -90,
+            textfont: { size: 12, color: '#0f172a', family: 'JetBrains Mono, monospace', weight: 600 },
             hovertemplate: '<b>Barrel %{x}</b><br>Time: <b>%{y:.0f}ms</b><extra></extra>',
             hoverlabel: { bgcolor: '#1e293b', bordercolor: '#38bdf8', font: { color: '#f8fafc', size: 13 } },
             cliponaxis: false
@@ -87,8 +92,7 @@ export default function BarrelExecutionChart({ barrels, selectedBarrel, onBarrel
                 gridcolor: '#334155',
                 automargin: true,
                 zeroline: false,
-                autorange: true // ENABLED: Auto-scale
-                // REMOVED: range: yRange
+                autorange: true
             },
             plot_bgcolor: '#0b1121',
             paper_bgcolor: '#0b1121',
