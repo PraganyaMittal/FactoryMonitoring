@@ -91,7 +91,7 @@ export default function AnalysisResultsModal({
         switch (activeTab) {
             case 'timeline':
                 return (
-                    <div className="card" style={{
+                    <div className="card no-hover" style={{
                         height: '100%',
                         padding: '0.5rem',
                         display: 'flex',
@@ -123,7 +123,7 @@ export default function AnalysisResultsModal({
                                 overflow: 'hidden'
                             }}
                         >
-                            <div className="card" style={{ height: '100%', padding: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+                            <div className="card no-hover" style={{ height: '100%', padding: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
                                 <div style={{ flex: 1, width: '100%', minHeight: 0, position: 'relative' }}>
                                     <div style={{ position: 'absolute', inset: 0 }}>
                                         {selectedBarrelData ? (
@@ -148,7 +148,7 @@ export default function AnalysisResultsModal({
                                 overflow: 'hidden'
                             }}
                         >
-                            <div className="card" style={{ height: '100%', padding: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+                            <div className="card no-hover" style={{ height: '100%', padding: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
                                 <div style={{ flex: 1, width: '100%', minHeight: 0, position: 'relative' }}>
                                     <div style={{ position: 'absolute', inset: 0 }}>
                                         <BarrelExecutionChart
@@ -166,7 +166,7 @@ export default function AnalysisResultsModal({
 
             case 'logs':
                 return (
-                    <div className="card" style={{ height: '100%', padding: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column', background: '#0f172a' }}>
+                    <div className="card no-hover" style={{ height: '100%', padding: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column', background: '#0f172a' }}>
                         <pre style={{
                             margin: 0, padding: '1rem', overflow: 'auto', flex: 1,
                             fontFamily: 'JetBrains Mono', fontSize: '0.75rem', color: '#cbd5e1', lineHeight: 1.5
