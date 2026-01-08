@@ -49,7 +49,7 @@ export default function PCSelectionList({ pcs, onSelectPC, loading }: Props) {
     const currentLines = activeTab && groupedPCs[activeTab] ? groupedPCs[activeTab] : {};
 
     return (
-        <div className="card" style={{ padding: 0, height: '100%', display: 'flex', flexDirection: 'column', background: 'var(--bg-card)' }}>
+        <div className="card no-hover" style={{ padding: 0, height: '100%', display: 'flex', flexDirection: 'column', background: 'var(--bg-card)' }}>
 
             {/* --- Header & Tabs --- */}
             <div style={{ borderBottom: '1px solid var(--border)', background: 'var(--bg-panel)' }}>

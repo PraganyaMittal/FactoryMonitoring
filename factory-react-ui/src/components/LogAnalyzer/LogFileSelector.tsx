@@ -340,7 +340,7 @@ export default function LogFileSelector({
     // RENDER
     // =========================================================================
     return (
-        <div className="card" style={{
+        <div className="card no-hover" style={{
             padding: 0,
             overflow: 'hidden',
             height: '100%',
