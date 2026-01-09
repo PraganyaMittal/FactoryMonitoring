@@ -63,6 +63,12 @@ namespace FactoryMonitoringWeb.Controllers
                 config.UpdateRequestTime = DateTime.Now;
                 config.UpdateApplied = false;
 
+                // Deduplication
+                var pendingCmds = await _context.AgentCommands
+                    .Where(c => c.PCId == pcId && c.Status == "Pending" && c.CommandType == "UpdateConfig")
+                    .ToListAsync();
+                if (pendingCmds.Any()) _context.AgentCommands.RemoveRange(pendingCmds);
+
                 var command = new AgentCommand
                 {
                     PCId = pcId,
@@ -122,6 +128,13 @@ namespace FactoryMonitoringWeb.Controllers
                     return Json(new { success = false, message = "Model not found" });
                 }
 
+
+                // Deduplication
+                var pendingCmds = await _context.AgentCommands
+                    .Where(c => c.PCId == pcId && c.Status == "Pending" && c.CommandType == "ChangeModel")
+                    .ToListAsync();
+                if (pendingCmds.Any()) _context.AgentCommands.RemoveRange(pendingCmds);
+
                 var command = new AgentCommand
                 {
                     PCId = pcId,
@@ -160,6 +173,14 @@ namespace FactoryMonitoringWeb.Controllers
                 {
                     return Json(new { success = false, message = "Model not found" });
                 }
+
+
+                // Deduplication: Since this is a manual download request, let's clear any other model ops
+                var pendingCmds = await _context.AgentCommands
+                    .Where(c => c.PCId == pcId && c.Status == "Pending" && 
+                           (c.CommandType == "DownloadModel" || c.CommandType == "UploadModel" || c.CommandType == "ChangeModel"))
+                    .ToListAsync();
+                if (pendingCmds.Any()) _context.AgentCommands.RemoveRange(pendingCmds);
 
                 var command = new AgentCommand
                 {

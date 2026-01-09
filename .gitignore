@@ -27,7 +27,11 @@ x64/
 Debug/
 Release/
 
-# Agent
-FactoryAgent/x64/
-FactoryAgent/Debug/
-FactoryAgent/Release/
+# Agent Config (Local)
+FactoryAgent/agent_config.json
+
+# Build Directories (Recursive)
+**/x64/
+**/Debug/
+**/Release/
+
