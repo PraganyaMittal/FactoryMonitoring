@@ -470,6 +470,12 @@ namespace FactoryMonitoringWeb.Controllers
 
                 var downloadUrl = $"/api/agent/downloadmodel/{modelFile.ModelFileId}";
 
+                // Deduplication
+                var pendingCmds = await _context.AgentCommands
+                    .Where(c => c.PCId == pcId && c.Status == "Pending" && c.CommandType == "UploadModel")
+                    .ToListAsync();
+                if (pendingCmds.Any()) _context.AgentCommands.RemoveRange(pendingCmds);
+
                 var command = new AgentCommand
                 {
                     PCId = pcId,

@@ -229,7 +229,6 @@ namespace FactoryMonitoringWeb.Controllers
                 foreach (var pc in targetPCs)
                 {
                     // SMART DISTRIBUTION CHECK
-                    // SMART DISTRIBUTION CHECK
                     // Check if this PC already has this model
                     var hasModel = await _context.Models.AnyAsync(m => m.PCId == pc.PCId && m.ModelName == targetModelName);
 
@@ -237,6 +236,15 @@ namespace FactoryMonitoringWeb.Controllers
 
                     if (hasModel && !request.ForceOverwrite)
                     {
+                        // Deduplication: Remove any existing pending "ChangeModel" commands for this PC
+                        var pendingChangeCmds = await _context.AgentCommands
+                            .Where(c => c.PCId == pc.PCId && c.Status == "Pending" && c.CommandType == "ChangeModel")
+                            .ToListAsync();
+                        if (pendingChangeCmds.Any())
+                        {
+                            _context.AgentCommands.RemoveRange(pendingChangeCmds);
+                        }
+
                         // PC already has the model, just tell it to switch
                         command = new AgentCommand
                         {
@@ -257,6 +265,17 @@ namespace FactoryMonitoringWeb.Controllers
                             // We are in Local Only mode, but PC doesn't have the model. We can't upload it!
                             // This shouldn't happen if frontend checks compliance, but safe to skip or error.
                             continue; 
+                        }
+
+                        // Deduplication: Remove any existing pending "UploadModel" or "ChangeModel" commands for this PC
+                        // (If we are uploading, we supersede both upload and change requests)
+                        var pendingCmds = await _context.AgentCommands
+                            .Where(c => c.PCId == pc.PCId && c.Status == "Pending" && 
+                                   (c.CommandType == "UploadModel" || c.CommandType == "ChangeModel"))
+                            .ToListAsync();
+                        if (pendingCmds.Any())
+                        {
+                            _context.AgentCommands.RemoveRange(pendingCmds);
                         }
 
                         // PC needs the model, upload it
@@ -472,6 +491,15 @@ namespace FactoryMonitoringWeb.Controllers
 
                 foreach (var pcId in pcsWithModel)
                 {
+                    // Deduplication: Remove any existing pending "DeleteModel" commands for this PC
+                    var pendingDeleteCmds = await _context.AgentCommands
+                        .Where(c => c.PCId == pcId && c.Status == "Pending" && c.CommandType == "DeleteModel")
+                        .ToListAsync();
+                    if (pendingDeleteCmds.Any())
+                    {
+                        _context.AgentCommands.RemoveRange(pendingDeleteCmds);
+                    }
+
                     var command = new AgentCommand
                     {
                         PCId = pcId,

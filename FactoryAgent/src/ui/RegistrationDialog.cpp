@@ -100,7 +100,7 @@ INT_PTR CALLBACK RegistrationDialog::DialogProc(HWND hDlg, UINT message, WPARAM 
             ofn.lpstrFilter = "Config Files (*.ini)\0*.ini\0All Files (*.*)\0*.*\0";
             ofn.lpstrFile = filename;
             ofn.nMaxFile = MAX_PATH;
-            ofn.Flags = OFN_FILEMUSTEXIST | OFN_PATHMUSTEXIST;
+            ofn.Flags = OFN_FILEMUSTEXIST | OFN_PATHMUSTEXIST | OFN_NOCHANGEDIR;
 
             if (GetOpenFileNameA(&ofn)) {
                 SetDlgItemTextA(hDlg, IDC_CONFIG_PATH, filename);
