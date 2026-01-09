@@ -23,11 +23,12 @@ namespace FactoryMonitoringWeb.Controllers
         [HttpPost("register")]
         public async Task<ActionResult<AgentRegistrationResponse>> Register([FromBody] AgentRegistrationRequest request)
         {
+            // ModelState is automatically validated due to [ApiController] attribute based on DTO annotations
             try
             {
                 var existingPC = await _context.FactoryPCs
-                    .FirstOrDefaultAsync(p => p.LineNumber == request.LineNumber 
-                                            && p.PCNumber == request.PCNumber 
+                    .FirstOrDefaultAsync(p => p.LineNumber == request.LineNumber
+                                            && p.PCNumber == request.PCNumber
                                             && p.ModelVersion == request.ModelVersion);
 
                 int pcId;
@@ -226,9 +227,6 @@ namespace FactoryMonitoringWeb.Controllers
                     .Where(m => m.PCId == request.PCId)
                     .ToListAsync();
 
-                // CHANGE 1: Removed the loop that blindly reset IsCurrentModel to false here.
-                // This allows us to compare with the previous state inside the loop below.
-
                 foreach (var modelInfo in request.Models)
                 {
                     var existingModel = existingModels
@@ -242,33 +240,24 @@ namespace FactoryMonitoringWeb.Controllers
                             ModelName = modelInfo.ModelName,
                             ModelPath = modelInfo.ModelPath,
                             IsCurrentModel = modelInfo.IsCurrent,
-                            // If it's a new model and it's active, set the time now.
                             LastUsed = modelInfo.IsCurrent ? DateTime.Now : null
                         };
                         _context.Models.Add(newModel);
                     }
                     else
                     {
-                        // CHANGE 2: Capture the OLD state before updating
                         bool wasCurrent = existingModel.IsCurrentModel;
 
-                        // Update standard fields
                         existingModel.ModelPath = modelInfo.ModelPath;
                         existingModel.IsCurrentModel = modelInfo.IsCurrent;
 
-                        // CHANGE 3: Only update the timestamp if it is NEWLY becoming current.
-                        // This prevents the time from resetting to "Now" on every 5-second heartbeat.
                         if (modelInfo.IsCurrent && !wasCurrent)
                         {
                             existingModel.LastUsed = DateTime.Now;
                         }
-
-                        // If it was already current (modelInfo.IsCurrent && wasCurrent), 
-                        // we do NOT touch LastUsed, preserving the original activation time.
                     }
                 }
 
-                // Remove models that are no longer reported by the agent
                 var modelNamesFromRequest = request.Models.Select(m => m.ModelName).ToList();
                 var modelsToRemove = existingModels
                     .Where(m => !modelNamesFromRequest.Contains(m.ModelName))
@@ -295,8 +284,6 @@ namespace FactoryMonitoringWeb.Controllers
             }
         }
 
-        // Location: FactoryMonitoringWeb/Controllers/AgentApiController.cs
-
         [HttpPost("commandresult")]
         public async Task<ActionResult<ApiResponse>> CommandResult([FromBody] CommandResultRequest request)
         {
@@ -308,14 +295,11 @@ namespace FactoryMonitoringWeb.Controllers
                     return NotFound(new ApiResponse { Success = false, Message = "Command not found" });
                 }
 
-                // Update command status
                 command.Status = request.Status;
                 command.ResultData = request.ResultData;
                 command.ErrorMessage = request.ErrorMessage;
                 command.ExecutedDate = DateTime.Now;
 
-                // === LOGIC START: Finalize Deletion ===
-                // If the Agent successfully reset, NOW we delete the PC from the database.
                 if (command.CommandType == "ResetAgent" && request.Status == "Completed")
                 {
                     var pc = await _context.FactoryPCs
@@ -325,12 +309,10 @@ namespace FactoryMonitoringWeb.Controllers
 
                     if (pc != null)
                     {
-                        // Remove the PC (Cascade delete will clean up this command too)
                         _context.FactoryPCs.Remove(pc);
                         _logger.LogInformation($"PC {pc.PCId} permanently deleted after Agent confirmation.");
                     }
                 }
-                // === LOGIC END ===
 
                 await _context.SaveChangesAsync();
 
@@ -399,12 +381,24 @@ namespace FactoryMonitoringWeb.Controllers
             {
                 if (file == null || file.Length == 0)
                 {
-                    return BadRequest(new ApiResponse
-                    {
-                        Success = false,
-                        Message = "No file uploaded"
-                    });
+                    return BadRequest(new ApiResponse { Success = false, Message = "No file uploaded" });
                 }
+
+                // --- SECURITY VALIDATION ---
+                // 1. Size Limit (e.g. 500 MB)
+                if (file.Length > 500 * 1024 * 1024)
+                {
+                    return BadRequest(new ApiResponse { Success = false, Message = "File size exceeds limit of 500MB" });
+                }
+
+                // 2. Extension Whitelist
+                var allowedExtensions = new[] { ".zip", ".json", ".xml", ".config" };
+                var ext = Path.GetExtension(file.FileName).ToLowerInvariant();
+                if (!allowedExtensions.Contains(ext))
+                {
+                    return BadRequest(new ApiResponse { Success = false, Message = "Invalid file type. Allowed: .zip, .json, .xml, .config" });
+                }
+                // ---------------------------
 
                 using var memoryStream = new MemoryStream();
                 await file.CopyToAsync(memoryStream);
@@ -447,12 +441,17 @@ namespace FactoryMonitoringWeb.Controllers
             {
                 if (file == null || file.Length == 0)
                 {
-                    return BadRequest(new ApiResponse
-                    {
-                        Success = false,
-                        Message = "No file uploaded"
-                    });
+                    return BadRequest(new ApiResponse { Success = false, Message = "No file uploaded" });
                 }
+
+                // Same validation here if desired
+                if (file.Length > 500 * 1024 * 1024)
+                    return BadRequest(new ApiResponse { Success = false, Message = "File too large" });
+
+                var ext = Path.GetExtension(file.FileName).ToLowerInvariant();
+                if (ext != ".zip")
+                    return BadRequest(new ApiResponse { Success = false, Message = "Only .zip files allowed for Model Upload" });
+
 
                 using var memoryStream = new MemoryStream();
                 await file.CopyToAsync(memoryStream);
@@ -469,7 +468,6 @@ namespace FactoryMonitoringWeb.Controllers
                 _context.ModelFiles.Add(modelFile);
                 await _context.SaveChangesAsync();
 
-                // Create download URL for the agent
                 var downloadUrl = $"/api/agent/downloadmodel/{modelFile.ModelFileId}";
 
                 var command = new AgentCommand
@@ -481,7 +479,7 @@ namespace FactoryMonitoringWeb.Controllers
                         ModelFileId = modelFile.ModelFileId,
                         ModelName = modelName,
                         FileName = file.FileName,
-                        DownloadUrl = downloadUrl  // ADDED: Agent needs this
+                        DownloadUrl = downloadUrl
                     }),
                     Status = "Pending",
                     CreatedDate = DateTime.Now
