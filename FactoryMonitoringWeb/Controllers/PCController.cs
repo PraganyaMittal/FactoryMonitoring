@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
 using System.Text;
+using FactoryMonitoringWeb.Models.DTOs; // Ensure DTOs are imported
 
 namespace FactoryMonitoringWeb.Controllers
 {
@@ -17,6 +18,18 @@ namespace FactoryMonitoringWeb.Controllers
             _context = context;
             _logger = logger;
         }
+
+        // --- VALIDATION HELPER ---
+        private bool IsValidPath(string path)
+        {
+            if (string.IsNullOrWhiteSpace(path)) return false;
+            // Check for directory traversal attempts
+            if (path.Contains("..") || path.Contains("~")) return false;
+            // Check for invalid file system characters
+            if (path.IndexOfAny(Path.GetInvalidPathChars()) >= 0) return false;
+            return true;
+        }
+        // -------------------------
 
         public async Task<IActionResult> Details(int id)
         {
@@ -173,7 +186,6 @@ namespace FactoryMonitoringWeb.Controllers
             }
         }
 
-        // NEW ENDPOINTS FOR UI AUTO-REFRESH
         [HttpGet]
         public async Task<IActionResult> GetModels(int pcId)
         {
@@ -257,8 +269,6 @@ namespace FactoryMonitoringWeb.Controllers
             }
         }
 
-        // Location: FactoryMonitoringWeb/Controllers/PCController.cs
-
         [HttpPost]
         public async Task<IActionResult> DeletePC(int pcId)
         {
@@ -274,7 +284,6 @@ namespace FactoryMonitoringWeb.Controllers
                     return Json(new { success = false, message = "PC not found" });
                 }
 
-                // 1. Queue the Reset Command
                 var resetCmd = new AgentCommand
                 {
                     PCId = pcId,
@@ -284,14 +293,8 @@ namespace FactoryMonitoringWeb.Controllers
                 };
                 _context.AgentCommands.Add(resetCmd);
 
-                // 2. Mark PC as "Deleting" via name or status so you know it's pending
-                // (Optional but helps avoid confusion if you refresh the page)
-                pc.PCNumber = -1; // Example: Set invalid number or add a status field
+                pc.PCNumber = -1;
                 pc.IsOnline = false;
-
-                // 3. IMPORTANT: DO NOT REMOVE THE PC YET!
-                // The Agent needs this record to exist to fetch the command during Heartbeat.
-                // _context.FactoryPCs.Remove(pc);  <-- REMOVE OR COMMENT OUT THIS LINE
 
                 await _context.SaveChangesAsync();
 
@@ -307,11 +310,27 @@ namespace FactoryMonitoringWeb.Controllers
                 return Json(new { success = false, message = $"Error: {ex.Message}" });
             }
         }
+
         [HttpPost]
-        public async Task<IActionResult> UpdatePC([FromBody] FactoryMonitoringWeb.Models.DTOs.PCUpdateRequest request)
+        public async Task<IActionResult> UpdatePC([FromBody] PCUpdateRequest request)
         {
             try
             {
+                // 1. DATA VALIDATION (DTO Annotations)
+                if (!ModelState.IsValid)
+                {
+                    var errors = ModelState.Values.SelectMany(v => v.Errors).Select(e => e.ErrorMessage).ToList();
+                    return Json(new { success = false, message = "Validation failed: " + string.Join(", ", errors) });
+                }
+
+                // 2. LOGIC VALIDATION (Path Security)
+                if (!IsValidPath(request.ConfigFilePath) ||
+                    !IsValidPath(request.LogFolderPath) ||
+                    !IsValidPath(request.ModelFolderPath))
+                {
+                    return Json(new { success = false, message = "Invalid characters or traversal sequence (..) detected in file paths." });
+                }
+
                 var pc = await _context.FactoryPCs.FindAsync(request.PCId);
                 if (pc == null)
                 {
@@ -343,14 +362,11 @@ namespace FactoryMonitoringWeb.Controllers
                 pc.ModelVersion = request.ModelVersion;
                 pc.LastUpdated = DateTime.Now;
 
-                // [ADDED] Queue command to update Agent's local config
                 var agentSettings = new
                 {
                     LineNumber = request.LineNumber,
                     PCNumber = request.PCNumber,
                     ModelVersion = request.ModelVersion,
-                    // We don't send PCId or ServerUrl usually as they stay static, 
-                    // but you can include them if needed.
                 };
 
                 var updateCmd = new AgentCommand
@@ -373,7 +389,5 @@ namespace FactoryMonitoringWeb.Controllers
                 return Json(new { success = false, message = $"Error: {ex.Message}" });
             }
         }
-
-
     }
 }
