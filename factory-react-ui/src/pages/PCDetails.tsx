@@ -3,12 +3,14 @@ import { useParams, Link } from 'react-router-dom'
 import { ArrowLeft, Server, Wifi, Play, Download, Settings, Upload, Trash2, RefreshCw, Check } from 'lucide-react'
 import { factoryApi } from '../services/api'
 import type { PCDetails } from '../types'
+import NotFound from './NotFound' // Import NotFound
 
 export default function PCDetailsPage() {
     const { id } = useParams()
     const [pc, setPC] = useState<PCDetails | null>(null)
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
+    const [isNotFound, setIsNotFound] = useState(false) // Not Found State
 
     // Model management
     const [selectedModel, setSelectedModel] = useState<string>('')
@@ -23,6 +25,9 @@ export default function PCDetailsPage() {
     const [showUploadConfig, setShowUploadConfig] = useState(false)
     const [configFile, setConfigFile] = useState<File | null>(null)
 
+    // --- STRICT VALIDATION ---
+    const isIdInvalid = !id || !/^\d+$/.test(id);
+
     // Cleanup polling timer on unmount
     useEffect(() => {
         return () => {
@@ -31,16 +36,22 @@ export default function PCDetailsPage() {
     }, [])
 
     useEffect(() => {
-        if (id) {
+        if (!isIdInvalid && id) {
             loadPC(parseInt(id))
         }
-    }, [id])
+    }, [id, isIdInvalid])
 
     const loadPC = async (pcId: number) => {
         try {
             setLoading(true)
             setError(null)
             const data = await factoryApi.getPC(pcId)
+
+            if (!data) {
+                setIsNotFound(true)
+                return
+            }
+
             setPC(data)
             // Set default selected model to current model
             const currentModel = data.availableModels.find(m => m.isCurrentModel)
@@ -51,10 +62,16 @@ export default function PCDetailsPage() {
             }
         } catch (err) {
             console.error('Failed to load PC:', err)
-            setError('Failed to load PC details')
+            // Assuming errors here (like 404 from axios) mean not found
+            setIsNotFound(true)
         } finally {
             setLoading(false)
         }
+    }
+
+    // --- VALIDATION RENDER CHECK ---
+    if (isIdInvalid || isNotFound) {
+        return <NotFound />
     }
 
     // Model Actions
@@ -101,7 +118,6 @@ export default function PCDetailsPage() {
             const result = await factoryApi.downloadModelFromPC(pc.pcId, selectedModel)
 
             if (result.success && result.commandId) {
-                // Start polling for completion
                 pollDownloadStatus(result.commandId.toString())
             } else {
                 alert('Failed to start download command.')
@@ -117,12 +133,8 @@ export default function PCDetailsPage() {
         try {
             const statusResult = await factoryApi.checkDownloadStatus(commandId.toString())
 
-
             if (statusResult.status === 'Completed') {
-                // 1. Success! Trigger browser download
                 const downloadUrl = statusResult.downloadUrl
-
-                // Create invisible link and click it
                 const link = document.createElement('a')
                 link.href = downloadUrl
                 link.download = `${selectedModel}.zip`
@@ -134,12 +146,10 @@ export default function PCDetailsPage() {
                 alert('Download ready! File is downloading.')
             }
             else if (statusResult.status === 'Failed') {
-                // 2. Failure
                 setIsDownloading(false)
                 alert(`Download failed: ${statusResult.message}`)
             }
             else {
-                // 3. Still working -> Poll again in 2 seconds
                 pollTimer.current = window.setTimeout(() => pollDownloadStatus(commandId), 2000)
             }
         } catch (error) {
@@ -221,23 +231,7 @@ export default function PCDetailsPage() {
         )
     }
 
-    if (error || !pc) {
-        return (
-            <div className="main-content" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '400px' }}>
-                <div style={{ textAlign: 'center' }}>
-                    <div style={{ fontSize: '1.25rem', marginBottom: '1rem', color: 'var(--danger-500)' }}>
-                        {error || 'PC not found'}
-                    </div>
-                    <Link to="/dashboard" className="btn btn-primary">
-                        <ArrowLeft size={16} />
-                        Back to Dashboard
-                    </Link>
-                </div>
-            </div>
-        )
-    }
-
-    const currentModel = pc.availableModels.find(m => m.isCurrentModel)
+    const currentModel = pc?.availableModels.find(m => m.isCurrentModel)
 
     return (
         <>
@@ -250,20 +244,20 @@ export default function PCDetailsPage() {
                         </Link>
                         <div>
                             <h1 className="header-title">
-                                Line {pc.lineNumber} - PC {pc.pcNumber}
+                                Line {pc?.lineNumber} - PC {pc?.pcNumber}
                             </h1>
-                            <p className="header-subtitle">{pc.ipAddress} • Version {pc.modelVersion}</p>
+                            <p className="header-subtitle">{pc?.ipAddress} • Version {pc?.modelVersion}</p>
                         </div>
                     </div>
                 </div>
                 <div className="header-actions">
-                    <span className={`badge ${pc.isOnline ? 'badge-success' : 'badge-danger'}`}>
+                    <span className={`badge ${pc?.isOnline ? 'badge-success' : 'badge-danger'}`}>
                         <Wifi size={14} />
-                        {pc.isOnline ? 'Online' : 'Offline'}
+                        {pc?.isOnline ? 'Online' : 'Offline'}
                     </span>
-                    <span className={`badge ${pc.isApplicationRunning ? 'badge-success' : 'badge-neutral'}`}>
+                    <span className={`badge ${pc?.isApplicationRunning ? 'badge-success' : 'badge-neutral'}`}>
                         <Play size={14} />
-                        {pc.isApplicationRunning ? 'Running' : 'Stopped'}
+                        {pc?.isApplicationRunning ? 'Running' : 'Stopped'}
                     </span>
                 </div>
             </div>
@@ -284,19 +278,19 @@ export default function PCDetailsPage() {
                             <tbody>
                                 <tr>
                                     <td>IP Address</td>
-                                    <td><strong>{pc.ipAddress}</strong></td>
+                                    <td><strong>{pc?.ipAddress}</strong></td>
                                 </tr>
                                 <tr>
                                     <td>Model Version</td>
-                                    <td><strong>{pc.modelVersion}</strong></td>
+                                    <td><strong>{pc?.modelVersion}</strong></td>
                                 </tr>
                                 <tr>
                                     <td>Registered</td>
-                                    <td>{new Date(pc.registeredDate).toLocaleString()}</td>
+                                    <td>{pc?.registeredDate ? new Date(pc.registeredDate).toLocaleString() : '-'}</td>
                                 </tr>
                                 <tr>
                                     <td>Last Updated</td>
-                                    <td>{new Date(pc.lastUpdated).toLocaleString()}</td>
+                                    <td>{pc?.lastUpdated ? new Date(pc.lastUpdated).toLocaleString() : '-'}</td>
                                 </tr>
                             </tbody>
                         </table>
@@ -312,15 +306,15 @@ export default function PCDetailsPage() {
                         </div>
                         <div style={{ marginBottom: 'var(--spacing-md)' }}>
                             <div className="label">CONFIG FILE</div>
-                            <div className="path-text">{pc.configFilePath}</div>
+                            <div className="path-text">{pc?.configFilePath}</div>
                         </div>
                         <div style={{ marginBottom: 'var(--spacing-md)' }}>
                             <div className="label">LOG PATH</div>
-                            <div className="path-text">{pc.logFilePath}</div>
+                            <div className="path-text">{pc?.logFilePath}</div>
                         </div>
                         <div>
                             <div className="label">MODEL FOLDER</div>
-                            <div className="path-text">{pc.modelFolderPath}</div>
+                            <div className="path-text">{pc?.modelFolderPath}</div>
                         </div>
                     </div>
                 </div>
@@ -344,8 +338,8 @@ export default function PCDetailsPage() {
                                 className="form-select"
                                 style={{ flex: 1 }}
                             >
-                                {pc.availableModels.length === 0 && <option value="">No models synced yet</option>}
-                                {pc.availableModels.map(model => (
+                                {pc?.availableModels.length === 0 && <option value="">No models synced yet</option>}
+                                {pc?.availableModels.map(model => (
                                     <option key={model.modelId} value={model.modelName}>
                                         {model.modelName} {model.isCurrentModel ? '(Current)' : ''}
                                     </option>
@@ -443,7 +437,7 @@ export default function PCDetailsPage() {
                         Configuration File
                     </h2>
 
-                    {pc.config ? (
+                    {pc?.config ? (
                         <>
                             <div style={{ marginBottom: 'var(--spacing-lg)' }}>
                                 <p><strong>Last Modified:</strong> {new Date(pc.config.lastModified).toLocaleString()}</p>
@@ -471,7 +465,7 @@ export default function PCDetailsPage() {
                     ) : (
                         <div style={{ textAlign: 'center', padding: 'var(--spacing-xl)', color: 'var(--neutral-500)' }}>
                             <p>Config file not yet uploaded from agent.</p>
-                            <button onClick={() => loadPC(pc.pcId)} className="btn btn-secondary" style={{ marginTop: 'var(--spacing-md)' }}>
+                            <button onClick={() => pc && loadPC(pc.pcId)} className="btn btn-secondary" style={{ marginTop: 'var(--spacing-md)' }}>
                                 <RefreshCw size={16} />
                                 Refresh Page
                             </button>

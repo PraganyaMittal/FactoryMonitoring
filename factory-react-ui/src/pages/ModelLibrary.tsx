@@ -1,5 +1,9 @@
 import { useEffect, useState, useRef } from 'react'
 import { Package, Upload, Trash2, Rocket, Download, X, HardDrive, AlertTriangle } from 'lucide-react'
+// 1. Add Imports
+import { useSearchParams } from 'react-router-dom';
+import NotFound from './NotFound';
+
 import { factoryApi } from '../services/api'
 import type { ModelFile, ApplyModelRequest, FactoryPC } from '../types'
 import { LoadingOverlay } from '../components/LoadingOverlay'
@@ -9,8 +13,16 @@ import { OfflineAlertModal } from '../components/OfflineAlertModal'
 import { eventBus, EVENTS } from '../utils/eventBus'
 
 export default function ModelLibrary() {
+    // 2. STRICT VALIDATION: This page expects NO query parameters
+    const [searchParams] = useSearchParams();
+    if (Array.from(searchParams.keys()).length > 0) {
+        return <NotFound />;
+    }
+
     const [models, setModels] = useState<ModelFile[]>([])
     const [versions, setVersions] = useState<string[]>([])
+    // ... (rest of the logic remains exactly the same)
+
     // We fetch logic lines, but we also rely on PC data for dynamic lines
     const [allLines, setAllLines] = useState<number[]>([])
 

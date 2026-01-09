@@ -6,6 +6,7 @@ import { eventBus, EVENTS } from '../utils/eventBus'
 import PCCard from '../components/PCCard'
 import PCDetailsModal from '../components/PCDetailsModal'
 import LineModelManagerModal from '../components/LineModelManagerModal'
+import NotFound from './NotFound' // Import NotFound
 import type { LineGroup, FactoryPC } from '../types'
 
 type DashboardData = {
@@ -21,23 +22,53 @@ export default function Dashboard() {
     const lineParam = searchParams.get('line')
     const navigate = useNavigate()
 
+    // --- STRICT URL VALIDATION START ---
+
+    // 1. Check for UNKNOWN parameter keys (e.g., ?linjknde=1)
+    // We explicitly define that ONLY 'line' is a valid query parameter.
+    const allowedParams = ['line'];
+    const hasUnknownParams = Array.from(searchParams.keys()).some(key => !allowedParams.includes(key));
+
+    // 2. Check for INVALID line value (e.g., ?line=1hj)
+    // Must be digits only.
+    const isLineParamInvalid = lineParam !== null && !/^\d+$/.test(lineParam);
+
+    // --- STRICT URL VALIDATION END ---
+
     const [data, setData] = useState<DashboardData | null>(null)
     const [viewMode, setViewMode] = useState<'cards' | 'list'>('cards')
     const [loading, setLoading] = useState(true)
+    const [isNotFound, setIsNotFound] = useState(false) // Not Found State
+
     const [selectedPC, setSelectedPC] = useState<FactoryPC | null>(null)
     const [managingLine, setManagingLine] = useState<number | null>(null)
     const [expandedLines, setExpandedLines] = useState<Record<number, boolean>>({})
     const [showComplianceModal, setShowComplianceModal] = useState<{ lineNumber: number, nonCompliantPCs: FactoryPC[] } | null>(null)
 
-    // Fallback ref if version not available in URL
     const lastDeletedVersionRef = useRef<string | undefined>(undefined)
     const mounted = useRef(true)
+
+    // Reset not found state when URL changes
+    useEffect(() => {
+        setIsNotFound(false);
+    }, [version, lineParam]);
 
     const loadData = useCallback(async (isInitial: boolean) => {
         if (isInitial) setLoading(true)
         try {
             const targetLine = lineParam ? parseInt(lineParam) : undefined
             const res = await factoryApi.getPCs(version, targetLine)
+
+            // 3. LOGIC: If user asked for specific Version OR Line, but got 0 results -> 404
+            const hasSpecificContext = version !== undefined || targetLine !== undefined;
+
+            if (hasSpecificContext && res.lines.length === 0) {
+                if (mounted.current) {
+                    setIsNotFound(true)
+                    setLoading(false)
+                }
+                return;
+            }
 
             const allPCs = res.lines.flatMap(l => l.pcs)
             const online = allPCs.filter(pc => pc.isOnline).length
@@ -50,20 +81,27 @@ export default function Dashboard() {
                 lines: res.lines
             }
 
-            if (mounted.current) setData(dashboardData)
+            if (mounted.current) {
+                setData(dashboardData)
+                setIsNotFound(false)
+            }
         } catch (err) {
             console.error(err)
+            // Optional: Handle 404 from API specifically if needed
         } finally {
             if (isInitial && mounted.current) setLoading(false)
         }
     }, [lineParam, version])
 
     useEffect(() => {
+        // STOP: If URL has garbage keys or bad values, don't even fetch.
+        if (isLineParamInvalid || hasUnknownParams) return;
+
         mounted.current = true
         loadData(true)
         const interval = setInterval(() => loadData(false), 5000)
         return () => { mounted.current = false; clearInterval(interval) }
-    }, [version, lineParam])
+    }, [version, lineParam, isLineParamInvalid, hasUnknownParams, loadData])
 
     useEffect(() => {
         const handleRefresh = () => loadData(false)
@@ -71,7 +109,6 @@ export default function Dashboard() {
         return () => eventBus.off(EVENTS.REFRESH_DASHBOARD, handleRefresh)
     }, [loadData])
 
-    // Cleanup for empty lines (Fallback for external updates)
     useEffect(() => {
         if (data && data.lines.length > 0) {
             const initialExpanded: Record<number, boolean> = {}
@@ -87,7 +124,7 @@ export default function Dashboard() {
             }
         }
 
-        // REDIRECT FALLBACK: If API update shows 0 units on a specific line page
+        // REDIRECT FALLBACK: If API update shows 0 units on a specific line page (e.g. after delete)
         if (lineParam && data && data.total === 0) {
             const targetVersion = version || lastDeletedVersionRef.current;
             if (targetVersion) {
@@ -97,7 +134,7 @@ export default function Dashboard() {
             }
             lastDeletedVersionRef.current = undefined;
         }
-    }, [data, lineParam, version, navigate])
+    }, [data, lineParam, version, navigate, expandedLines])
 
     const toggleLine = (lineNumber: number) => {
         setExpandedLines(prev => ({ ...prev, [lineNumber]: !prev[lineNumber] }))
@@ -127,10 +164,20 @@ export default function Dashboard() {
         }
     }
 
+    // RENDER NOT FOUND if:
+    // 1. Line param format is wrong (isLineParamInvalid)
+    // 2. Unknown params exist (hasUnknownParams)
+    // 3. API returned empty result for valid query (isNotFound)
+    if (isLineParamInvalid || hasUnknownParams || isNotFound) {
+        return <NotFound />
+    }
+
     if (loading && !data) return <div className="main-content" style={{ display: 'flex', justifyContent: 'center', paddingTop: '10rem' }}>Loading...</div>
 
     const getHeaderText = () => {
-        if (version && lineParam) return `Version ${version} • Line ${lineParam} `
+        if (version && lineParam && data?.lines.find(l => l.lineNumber.toString() === lineParam)) {
+            return `Version ${version} • Line ${lineParam} `
+        }
         if (version) return `Version ${version} `
         return 'All PCs'
     }
@@ -249,8 +296,6 @@ export default function Dashboard() {
                 pcSummary={selectedPC}
                 onClose={() => setSelectedPC(null)}
                 onPCDeleted={(deletedVersion) => {
-                    // 1. INSTANT NAVIGATION LOGIC
-                    // If we are looking at a specific line and it had only 1 PC (the one just deleted), move now.
                     if (lineParam && data) {
                         const currentLine = data.lines.find(l => l.lineNumber.toString() === lineParam);
                         if (currentLine && currentLine.pcs.length <= 1) {
@@ -262,8 +307,6 @@ export default function Dashboard() {
                             }
                         }
                     }
-
-                    // 2. Trigger Background Refresh
                     if (deletedVersion) lastDeletedVersionRef.current = deletedVersion;
                     eventBus.emit(EVENTS.REFRESH_DASHBOARD);
                 }}

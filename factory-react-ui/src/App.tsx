@@ -3,24 +3,35 @@ import Layout from './components/Layout'
 import Dashboard from './pages/Dashboard'
 import ModelLibrary from './pages/ModelLibrary'
 import LogAnalyzer from './pages/LogAnalyzer'
+// Import the details page
+import PCDetailsPage from './pages/PCDetails'
+import NotFound from './pages/NotFound'
 import { ThemeProvider } from './contexts/ThemeContext'
 
 function App() {
-  return (
-    <ThemeProvider>
-      <Router>
-        <Routes>
-          <Route path="/" element={<Layout />}>
-            <Route index element={<Navigate to="/dashboard" replace />} />
-            <Route path="dashboard" element={<Dashboard />} />
-            <Route path="dashboard/:version" element={<Dashboard />} />
-            <Route path="models" element={<ModelLibrary />} />
-            <Route path="log-analyzer" element={<LogAnalyzer />} />
-          </Route>
-        </Routes>
-      </Router>
-    </ThemeProvider>
-  )
+    return (
+        <ThemeProvider>
+            <Router>
+                <Routes>
+                    {/* Main App Routes (Inside Sidebar Layout) */}
+                    <Route path="/" element={<Layout />}>
+                        <Route index element={<Navigate to="/dashboard" replace />} />
+                        <Route path="dashboard" element={<Dashboard />} />
+                        <Route path="dashboard/:version" element={<Dashboard />} />
+
+                        {/* 1. Added PC Details Route */}
+                        <Route path="pc/:id" element={<PCDetailsPage />} />
+
+                        <Route path="models" element={<ModelLibrary />} />
+                        <Route path="log-analyzer" element={<LogAnalyzer />} />
+                    </Route>
+
+                    {/* 404 Route (Outside Layout - Full Screen) */}
+                    <Route path="*" element={<NotFound />} />
+                </Routes>
+            </Router>
+        </ThemeProvider>
+    )
 }
 
 export default App

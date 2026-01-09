@@ -1,6 +1,10 @@
 ﻿import { useState, useEffect } from 'react';
 import { ScrollText } from 'lucide-react';
 import { AnimatePresence } from 'framer-motion';
+// 1. Add Imports
+import { useSearchParams } from 'react-router-dom';
+import NotFound from './NotFound';
+
 import { factoryApi } from '../services/api';
 import { logAnalyzerApi } from '../services/logAnalyzerApi';
 import { parseLogContent } from '../utils/logParser';
@@ -13,10 +17,18 @@ import AnalysisResultsModal from '../components/LogAnalyzer/AnalysisResultsModal
 import type { LogFileNode, AnalysisResult } from '../types/logTypes';
 
 export default function LogAnalyzer() {
+    // 2. STRICT VALIDATION: This page expects NO query parameters
+    const [searchParams] = useSearchParams();
+    if (Array.from(searchParams.keys()).length > 0) {
+        return <NotFound />;
+    }
+
     // State: Data
     const [pcs, setPCs] = useState<PCWithVersion[]>([]);
     const [logFiles, setLogFiles] = useState<LogFileNode[]>([]);
     const [analysisResult, setAnalysisResult] = useState<AnalysisResult | null>(null);
+
+    // ... (rest of the component logic remains exactly the same)
 
     // State: Selection
     const [selectedPC, setSelectedPC] = useState<PCWithVersion | null>(null);
